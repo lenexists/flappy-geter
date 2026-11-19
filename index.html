@@ -915,13 +915,16 @@ function applyTitleTheme(){
 }
 
 // ── Save / Load ───────────────────────────────────────────────────────────────
-function buildSaveCode(){
+function generateSaveCode(){
   const data={
     achievements, highScores, totalCoins, shopOwned, activeTheme,
     selectedCharacter, totalPowerUpsCollected,
     chestOwned, selectedTrail, totalLumberghPts
   };
-  document.getElementById('saveCodeBox').value=btoa(JSON.stringify(data));
+  return btoa(JSON.stringify(data));
+}
+function buildSaveCode(){
+  document.getElementById('saveCodeBox').value=generateSaveCode();
   document.getElementById('saveMsg').textContent='';
 }
 function copySaveCode(){
@@ -3278,36 +3281,52 @@ window.addEventListener('beforeunload', ()=>{
 
 // More reliable: auto-copy every 3 minutes while the page is open and toggle is on
 let _autoCopyInterval=null;
+let _autoCopyPending=false;
+function _execCopy(text){
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=text; ta.setAttribute('readonly','');
+    ta.style.cssText='position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0,text.length);
+    const ok=document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  }catch(e){ return false; }
+}
+// Browsers only allow clipboard writes right after a click/tap/key press.
+// The timer tries first; if blocked, the copy happens on the player's next input.
+function tryAutoCopy(){
+  if(!autoCopyOnClose) return;
+  const code=generateSaveCode();
+  const p=(navigator.clipboard&&document.hasFocus())?navigator.clipboard.writeText(code):Promise.reject();
+  p.then(()=>{ _autoCopyPending=false; showAutoCopyToast(true); })
+   .catch(()=>{ _autoCopyPending=true; });
+}
+function _autoCopyOnGesture(){
+  if(!_autoCopyPending||!autoCopyOnClose) return;
+  _autoCopyPending=false;
+  const code=generateSaveCode();
+  if(_execCopy(code)){ showAutoCopyToast(true); return; }
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(code).then(()=>showAutoCopyToast(true)).catch(()=>showAutoCopyToast(false));
+  } else showAutoCopyToast(false);
+}
+['pointerdown','keydown','touchend'].forEach(ev=>document.addEventListener(ev,_autoCopyOnGesture,true));
 function startAutoCopyInterval(){
   if(_autoCopyInterval) clearInterval(_autoCopyInterval);
-  _autoCopyInterval=setInterval(()=>{
-    if(!autoCopyOnClose) return;
-    const code=generateSaveCode();
-    // Try modern clipboard API first
-    navigator.clipboard.writeText(code).catch(()=>{
-      // Fallback to execCommand
-      try{
-        const ta=document.createElement('textarea');
-        ta.value=code; ta.style.cssText='position:fixed;top:-9999px;left:-9999px;opacity:0;';
-        document.body.appendChild(ta); ta.focus(); ta.select();
-        document.execCommand('copy'); document.body.removeChild(ta);
-      }catch(e){}
-    });
-    // Show brief toast
-    showAutoCopyToast();
-  }, 3*60*1000); // every 3 minutes
+  _autoCopyInterval=setInterval(tryAutoCopy,180000);
 }
 startAutoCopyInterval();
 
-function showAutoCopyToast(){
+function showAutoCopyToast(ok=true){
   const existing=document.getElementById('autoCopyToast');
   if(existing) existing.remove();
   const t=document.createElement('div');
   t.id='autoCopyToast';
-  t.style.cssText='position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:rgba(20,30,50,0.95);border:1px solid #ffd700;color:#ffd700;font-size:12px;padding:6px 14px;border-radius:20px;z-index:9999;pointer-events:none;transition:opacity 0.5s;';
-  t.textContent='📋 Save code auto-copied!';
+  t.style.cssText='position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:rgba(20,30,50,0.95);border:1px solid '+(ok?'#ffd700':'#ff6666')+';color:'+(ok?'#ffd700':'#ff9999')+';font-size:12px;padding:6px 14px;border-radius:20px;z-index:9999;pointer-events:none;transition:opacity 0.5s;';
+  t.textContent=ok?'📋 Save code auto-copied!':'⚠️ Auto-copy blocked. Copy your code from the Save menu.';
   document.body.appendChild(t);
-  setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),500); },2000);
+  setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),500); },ok?2000:3500);
 }
 
 let _saveReminderShown = false;
