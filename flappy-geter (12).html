@@ -1,0 +1,3365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>flappy geter • 桂林版</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&family=Zhi+Mang+Xing&family=Long+Cang&family=Playfair+Display:ital,wght@0,400;1,400&family=IM+Fell+English:ital@0;1&display=swap');
+  @font-face{font-family:'MingLiU';src:url('mingliu.ttf') format('truetype');}
+  body{margin:0;background:linear-gradient(to bottom,#000000,#0a0a2e);display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden;}
+  #game{width:420px;height:720px;border:12px solid #d32f2f;border-radius:16px;overflow:hidden;box-shadow:0 0 40px #ffd700;position:relative;transition:width 0.7s cubic-bezier(0.4,0,0.2,1),height 0.7s cubic-bezier(0.4,0,0.2,1);}
+  #game.mp-wide{width:920px;height:680px;}
+
+  /* ── Mobile layout ────────────────────────────────────────────── */
+  body.mobile{align-items:flex-start;height:100%;min-height:100vh;overflow-y:auto;}
+  body.mobile #game{
+    width:100vw; height:100vh;
+    border:none; border-radius:0;
+    box-shadow:none;
+    transform-origin:top left;
+  }
+  /* Scale canvas to fill mobile screen while preserving aspect */
+  body.mobile canvas#c{
+    display:block;
+    width:100% !important;
+    height:auto !important;
+  }
+  /* Title screen scrolls on mobile */
+  body.mobile #titleScreen{
+    overflow-y:auto;
+    padding:10px 8px 16px;
+    justify-content:flex-start;
+  }
+  body.mobile #titleScreen h1{ font-size:28px; margin:6px 0 2px; }
+  body.mobile #titleScreen p{ font-size:14px; margin:2px 0; }
+  /* Bigger touch targets for buttons on mobile */
+  body.mobile .btn{ font-size:15px !important; padding:9px 14px !important; margin:3px !important; }
+  body.mobile #titleScreen .btn{ min-height:42px; }
+  /* Overlay menus fill screen on mobile */
+  body.mobile .overlay{
+    border-radius:0;
+    padding:12px 10px;
+  }
+  /* Char grid: 4 per row on mobile */
+  body.mobile .char-row{ flex-wrap:wrap !important; justify-content:center !important; }
+  body.mobile .char-option img, body.mobile .char-option canvas{ width:58px !important; height:58px !important; }
+  /* Hide multiplayer on mobile */
+  body.mobile #mpBtn{ display:none !important; }
+  /* Splash screen adjustments */
+  body.mobile #splashTitle{ font-size:42px; }
+  body.mobile #splashClick{ font-size:16px; }
+  /* Difficulty row: lulz text on left, buttons on right */
+  body.mobile #difficultyRow{ flex-direction:row-reverse; justify-content:flex-end; gap:10px; width:100%; padding:0 8px; box-sizing:border-box; }
+  body.mobile #difficultyBtns{ order:1; }
+  body.mobile #lulzText{ order:0; text-align:left; max-width:90px; }
+  /* Version tag pinned to bottom on mobile */
+  body.mobile .ver-tag{ position:fixed; bottom:4px; right:8px; color:#555; font-size:10px; z-index:5; }
+  /* Save reminder banner compact on mobile */
+  canvas{display:none;}
+  #titleScreen{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;justify-content:center;align-items:center;color:#ffd700;z-index:10;padding:8px;box-sizing:border-box;overflow:hidden;}
+  h1{font-family:'Zhi Mang Xing',cursive;font-size:44px;margin:0 0 2px;text-shadow:4px 4px 0 #b71c1c;}
+  p{font-size:16px;margin:2px 0;}
+  .btn{padding:5px 16px;font-size:15px;font-family:'IM Fell English','Long Cang',cursive;color:white;border:none;border-radius:9px;cursor:pointer;margin:2px;box-shadow:0 3px 0 #b71c1c;transition:all 0.15s;}
+  .btn:active{transform:translateY(2px);box-shadow:0 1px 0 #b71c1c;}
+  .btnOrange{background:linear-gradient(135deg,#ff9800,#f57c00);}
+  .btnYellow{background:linear-gradient(135deg,#ffd700,#ffca28);color:#000;}
+  .btnGreen{background:linear-gradient(135deg,#00c9a7,#007a63);}
+  .btnPurple{background:linear-gradient(135deg,#ab47bc,#6a1b9a);}
+  .btnBlue{background:linear-gradient(135deg,#1976d2,#0d47a1);}
+  .btnRed{background:linear-gradient(135deg,#e53935,#b71c1c);}
+  #highScoreDisplay{font-size:13px;margin:2px 0;color:#88ff88;}
+  #coinDisplay{font-size:13px;margin:1px 0;color:#ffd700;}
+  .overlay{display:none;position:absolute;inset:0;background:rgba(10,20,30,0.97);color:#ffd700;z-index:110;flex-direction:column;justify-content:flex-start;align-items:center;padding:12px;box-sizing:border-box;overflow-y:auto;}
+  .overlay h2{font-family:'Zhi Mang Xing',cursive;font-size:36px;margin:4px 0 8px;text-shadow:3px 3px 0 #b71c1c;}
+  .ach-item{font-family:'IM Fell English','Long Cang',cursive;font-size:17px;margin:4px 0;padding:5px 14px;background:rgba(255,215,0,0.12);border-radius:9px;border:2px solid #ffd700;text-align:center;max-width:95%;}
+  /* Character grid */
+  #charGrid{display:flex;flex-direction:column;align-items:center;width:100%;max-width:400px;}
+  .char-row{display:flex;justify-content:center;flex-wrap:nowrap;}
+  .char-option{cursor:pointer;margin:3px;padding:3px;border:3px solid transparent;border-radius:10px;transition:border-color 0.2s,box-shadow 0.2s;position:relative;box-sizing:border-box;}
+  /* Shop */
+  .char-option img,.char-option canvas{width:52px;height:52px;border-radius:50%;border:2px solid #ffd700;box-shadow:0 0 8px rgba(255,215,0,0.5);display:block;}
+  .char-option.current{border:3px solid #67e8f9;box-shadow:0 0 14px #67e8f9;}
+  .char-tooltip{display:none;position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);padding:4px 8px;border-radius:7px;white-space:nowrap;font-size:11px;font-weight:bold;color:#fff;pointer-events:none;z-index:50;min-width:70px;text-align:center;}
+  .char-option:hover .char-tooltip{display:block;}
+  .ach-item{font-family:'IM Fell English','Long Cang',cursive;font-size:20px;margin:6px 0;padding:8px 18px;background:rgba(255,215,0,0.12);border-radius:9px;border:2px solid #ffd700;text-align:center;max-width:95%;}
+  .shop-item{background:rgba(255,215,0,0.1);border:2px solid #ffd700;border-radius:11px;padding:10px 14px;margin:6px 0;width:88%;max-width:360px;text-align:center;}
+  .shop-item h3{margin:0 0 4px;font-size:16px;color:#ffd700;}
+  .shop-item p{margin:2px 0;font-size:12px;color:#ccc;}
+  .shop-item button{margin-top:6px;padding:5px 14px;font-size:13px;border:none;border-radius:7px;cursor:pointer;font-weight:bold;}
+  .btn-buy{background:#ffd700;color:#000;} .btn-locked{background:#555;color:#aaa;cursor:default;}
+  .btn-on{background:#00e676;color:#000;} .btn-off{background:#ff5252;color:#fff;}
+  /* Settings */
+  .setting-row{display:flex;align-items:center;gap:12px;margin:12px 0;width:88%;max-width:360px;}
+  .setting-row label{flex:1;font-size:16px;color:#ffd700;}
+  .setting-row input[type=range]{flex:2;accent-color:#ffd700;height:6px;}
+  .setting-row span{font-size:14px;color:#aaa;min-width:34px;text-align:right;}
+  /* Toggle switch */
+  .toggle-switch{position:relative;display:inline-flex;align-items:center;width:72px;height:30px;cursor:pointer;flex-shrink:0;}
+  .toggle-switch input{opacity:0;width:0;height:0;position:absolute;}
+  .toggle-track{width:72px;height:30px;background:#333;border:2px solid #555;border-radius:15px;transition:background 0.2s,border-color 0.2s;position:relative;display:flex;align-items:center;}
+  .toggle-switch input:checked ~ .toggle-track{background:#4a3a00;border-color:#ffd700;}
+  .toggle-knob{position:absolute;left:3px;width:22px;height:22px;background:#888;border-radius:50%;transition:left 0.2s,background 0.2s;box-shadow:0 1px 4px rgba(0,0,0,0.4);}
+  .toggle-switch input:checked ~ .toggle-track .toggle-knob{left:43px;background:#ffd700;}
+  .toggle-label-off{position:absolute;right:6px;font-size:9px;font-weight:bold;color:#666;pointer-events:none;transition:opacity 0.2s;}
+  .toggle-label-on{position:absolute;left:6px;font-size:9px;font-weight:bold;color:#ffd700;pointer-events:none;opacity:0;transition:opacity 0.2s;}
+  .toggle-switch input:checked ~ .toggle-track .toggle-label-off{opacity:0;}
+  .toggle-switch input:checked ~ .toggle-track .toggle-label-on{opacity:1;}
+  /* Splash screen */
+  #splashScreen{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;justify-content:center;align-items:center;color:#ffd700;z-index:200;cursor:pointer;pointer-events:all;touch-action:manipulation;}
+  #splashTitle{font-family:'Zhi Mang Xing',cursive;font-size:62px;text-shadow:4px 4px 0 #b71c1c;display:inline-block;}
+  #splashSub{font-size:14px;color:#aaa;margin-top:8px;letter-spacing:2px;}
+  #splashVer{font-size:11px;color:#555;margin-top:4px;}
+  #splashClick{font-size:18px;color:#ffd700;margin-top:24px;animation:pulse 1.4s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  .splashBounce{animation:bounce 1.2s ease-in-out infinite;}
+  /* Shop tabs */
+  .shop-tabs{display:flex;gap:0;margin-bottom:10px;border-radius:10px;overflow:hidden;border:2px solid #ffd700;flex-shrink:0;width:88%;max-width:360px;}
+  .shop-tab{flex:1;padding:7px 0;font-size:14px;font-weight:bold;border:none;cursor:pointer;transition:background 0.15s;font-family:'IM Fell English','Long Cang',cursive;}
+  .shop-tab.active{background:#ffd700;color:#000;}
+  .shop-tab.inactive{background:#1a2a3a;color:#ffd700;}
+  /* Version tag */
+  .ver-tag{font-size:10px;color:#444;position:absolute;bottom:3px;right:6px;font-family:monospace;}
+</style>
+</head>
+<body>
+<div id="game">
+  <canvas id="c" width="420" height="720"></canvas>
+  <!-- God mode home button — only visible during gameplay with god mode on -->
+  <button id="godModeHomeBtn" onclick="sfx();endGameToHome()" style="display:none;position:absolute;top:6px;left:6px;z-index:15;background:rgba(255,68,68,0.85);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:bold;padding:4px 8px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.5);">⚡ HOME</button>
+
+  <!-- Splash Screen -->
+  <div id="splashScreen">
+    <div id="splashTitle" class="splashBounce">flappy geter</div>
+    <div id="splashSub">飞蛤桂林 🌄</div>
+    <div id="splashVer">v3.3 • guilin edition</div>
+    <div id="splashClick">click anywhere to start</div>
+  </div>
+
+  <div id="titleScreen">
+    <h1>flappy geter</h1>
+    <p>飞蛤桂林 🌄</p>
+    <div id="highScoreDisplay">Normal High: <span id="normalHS">0</span> • Lumbergh High: <span id="lumberghHS">0</span></div>
+    <div id="coinDisplay" style="display:flex;align-items:center;gap:4px;font-size:13px;margin:1px 0;color:#ffd700;">
+      <img id="coinIconHome" src="https://stonexbullion.com/product/image/1NU03/1-oz-gold-coin-bitcoin-1.webp" style="width:18px;height:18px;border-radius:50%;vertical-align:middle;">
+      Coins: <span id="coinCount">0</span>
+      &nbsp;&nbsp;
+      <img src="https://cdn.imgchest.com/files/3d92861b0622.png" style="width:18px;height:18px;border-radius:50%;vertical-align:middle;">
+      <span id="lumberghPtCount">0</span> LP
+    </div>
+
+    <div id="difficultyRow" style="margin:3px 0;display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:center;">
+      <div id="difficultyBtns" style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+        <button class="btn btnOrange" onclick="startGame(false)">简单 (Easy)</button>
+        <button class="btn btnOrange" onclick="startGame(false)">中等 (Medium)</button>
+        <button class="btn btnOrange" onclick="startGame(false)">困难 (Hard)</button>
+        <button class="btn btnOrange" onclick="startGame(false)">专家 🔥 (Expert)</button>
+      </div>
+      <span id="lulzText" style="font-size:11px;color:#aaa;font-style:italic;max-width:100px;line-height:1.4;">these buttons don't do anything.<br>they're for the lulz! lmao 😂</span>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;margin:2px 0;">
+      <button class="btn btnOrange" onclick="sfx();startGame(true)">Lumbergh Mode</button>
+      <span style="font-size:11px;color:#ccc;max-width:120px;line-height:1.3;">2x as fast! score 20+ to unlock lumbergh.</span>
+    </div>
+
+    <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin:2px 0;">
+      <button class="btn" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;" onclick="sfx();showOverlay('themesMenu');renderThemeList()">🎨 Themes</button>
+      <button class="btn" style="background:linear-gradient(135deg,#b45309,#f59e0b);color:#fff;" onclick="sfx();showCharacterSelect()">Characters</button>
+      <button class="btn" style="background:linear-gradient(135deg,#065f46,#10b981);color:#fff;" onclick="sfx();showAchievements()">Achievements</button>
+      <button class="btn" style="background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;" onclick="sfx();showTrailSelect()">✨ Trails</button>
+      <button class="btn btnGreen" onclick="sfx();shopTab='chars';showOverlay('shopMenu');refreshShopUI()">🛒 Shop</button>
+      <button class="btn btnBlue" onclick="sfx();showOverlay('settingsMenu')">⚙️ Settings</button>
+      <button class="btn btnRed" onclick="sfx();showOverlay('saveMenu');buildSaveCode()">💾 Save/Load</button>
+      <button class="btn" style="background:linear-gradient(135deg,#8b0000,#4a0000);color:#ffd700;border:1px solid #ffd700;" onclick="sfx();showLumberghChests()">📦 Lumbergh Chests</button>
+    </div>
+
+    <button class="btn btnOrange" style="font-size:18px;padding:8px 36px;margin-top:4px;" onclick="sfx();startGame(false)">START GAME</button>
+    <button id="mpBtn" class="btn btnPurple" style="font-size:15px;padding:6px 28px;margin-top:2px;" onclick="sfx();enterMultiplayer()">⚔️ Multiplayer</button>
+    <a id="fgHomeBtn" href="https://www.familialgent.com/" style="display:none;margin-top:6px;text-decoration:none;">
+      <button class="btn" style="background:linear-gradient(135deg,#1a3a1a,#2d6a2d);color:#aaffaa;border:1px solid #4a9a4a;font-size:13px;padding:6px 18px;">🏠 Familial Gent Home</button>
+    </a>
+    <p style="font-size:12px;margin-top:3px;color:#fff">or tap anywhere</p>
+    <span class="ver-tag">v3.3</span>
+  </div>
+
+  <!-- ── Overlays (must be inside #game for position:absolute to work) ── -->
+  <div id="achievementsMenu" class="overlay">
+    <h2>禅园成就</h2>
+    <div id="achList" style="text-align:center;max-width:370px;width:100%;"></div>
+    <button onclick="sfx();hideOverlay('achievementsMenu')" class="btn btnRed" style="margin-top:12px;font-size:18px;">Back</button>
+  </div>
+
+  <div id="lumberghChestsMenu" class="overlay" style="background:rgba(5,5,20,0.98);overflow:hidden;justify-content:center;">
+    <h2 style="color:#ffd700;font-size:28px;margin-bottom:2px;flex-shrink:0;">📦 Lumbergh Chests</h2>
+    <div style="font-size:13px;color:#aaa;margin-bottom:12px;flex-shrink:0;">LP: <span id="chestLPDisplay">0</span></div>
+
+    <!-- Main chest area (canvas for orb anim sits over chest img) -->
+    <div style="position:relative;width:200px;height:200px;margin:0 auto 14px;cursor:pointer;flex-shrink:0;" onclick="openChest()">
+      <img id="chestImg" src="https://cdn.imgchest.com/files/10ca44e379c2.png"
+           style="width:200px;height:200px;object-fit:contain;position:absolute;top:0;left:0;">
+      <canvas id="chestOrbCanvas" width="200" height="200" style="position:absolute;top:0;left:0;pointer-events:none;"></canvas>
+    </div>
+
+    <button id="chestOpenBtn" class="btn btnYellow" style="font-size:16px;padding:8px 28px;margin-bottom:12px;flex-shrink:0;" onclick="openChest()">
+      OPEN — <img src="https://cdn.imgchest.com/files/3d92861b0622.png" style="width:18px;height:18px;vertical-align:middle;"> 5 LP
+    </button>
+
+    <div style="display:flex;gap:10px;flex-shrink:0;">
+      <button class="btn btnBlue" style="font-size:12px;padding:4px 14px;" onclick="sfx();showChestPossibles()">🔍 Possible Unlocks</button>
+      <button onclick="sfx();hideOverlay('lumberghChestsMenu')" class="btn btnRed" style="font-size:14px;">Back</button>
+    </div>
+
+    <!-- Possible Unlocks panel -->
+    <div id="chestPossibles" style="display:none;position:absolute;inset:0;background:rgba(5,5,20,0.99);overflow-y:auto;padding:12px;box-sizing:border-box;">
+      <h3 style="color:#ffd700;margin:0 0 8px;font-size:18px;">🔍 Possible Unlocks</h3>
+      <div id="chestPossiblesList" style="width:100%;"></div>
+      <button onclick="sfx();document.getElementById('chestPossibles').style.display='none'" class="btn btnRed" style="margin-top:10px;font-size:14px;">← Back</button>
+    </div>
+
+    <!-- Win reveal panel -->
+    <div id="chestReveal" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.97);flex-direction:column;align-items:center;justify-content:center;z-index:20;padding:16px;box-sizing:border-box;">
+      <div style="font-family:'Zhi Mang Xing',cursive;font-size:32px;color:#ffd700;text-shadow:3px 3px 0 #b71c1c;margin-bottom:16px;">You got...</div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;justify-content:center;margin-bottom:16px;">
+        <div id="revealCharBox" style="text-align:center;background:rgba(255,215,0,0.07);border:2px solid #ffd700;border-radius:12px;padding:12px;min-width:120px;">
+          <img id="revealCharImg" src="" style="width:72px;height:72px;border-radius:50%;border:3px solid #ffd700;object-fit:cover;display:block;margin:0 auto 6px;">
+          <div id="revealCharName" style="font-size:13px;font-weight:bold;color:#ffd700;margin-bottom:2px;word-break:break-word;max-width:130px;"></div>
+          <div id="revealCharCls" style="font-size:10px;margin-bottom:2px;"></div>
+          <div id="revealCharNew" style="font-size:12px;font-weight:bold;color:#00ff88;min-height:16px;"></div>
+          <div id="revealCharDesc" style="font-size:10px;color:#aaa;margin-top:3px;max-width:130px;line-height:1.4;"></div>
+        </div>
+        <div id="revealTrailBox" style="text-align:center;background:rgba(255,215,0,0.07);border:2px solid #ffd700;border-radius:12px;padding:12px;min-width:120px;">
+          <canvas id="revealTrailCanvas" width="72" height="72" style="border-radius:50%;border:3px solid #ffd700;display:block;margin:0 auto 6px;"></canvas>
+          <div id="revealTrailName" style="font-size:13px;font-weight:bold;color:#ffd700;margin-bottom:2px;"></div>
+          <div id="revealTrailCls" style="font-size:10px;margin-bottom:2px;"></div>
+          <div id="revealTrailNew" style="font-size:12px;font-weight:bold;color:#00ff88;min-height:16px;"></div>
+        </div>
+      </div>
+      <button class="btn btnGreen" style="font-size:15px;padding:7px 24px;" onclick="sfx();closeChestReveal()">Collect!</button>
+    </div>
+  </div>
+
+  <div id="characterMenu" class="overlay">
+    <h2>Select Your Flappy</h2>
+    <div id="charGrid"></div>
+    <button onclick="sfx();hideOverlay('characterMenu')" class="btn btnRed" style="margin-top:12px;font-size:18px;">Back</button>
+  </div>
+
+  <div id="trailMenu" class="overlay">
+    <h2>✨ Trails</h2>
+    <div id="trailGrid"></div>
+    <button onclick="sfx();hideOverlay('trailMenu')" class="btn btnRed" style="margin-top:12px;font-size:18px;">Back</button>
+  </div>
+
+  <div id="shopMenu" class="overlay" style="justify-content:flex-start;overflow:hidden;">
+    <h2 style="flex-shrink:0;">🛒 Shop</h2>
+    <div class="shop-tabs">
+      <button class="shop-tab active" id="tabChars" onclick="switchShopTab('chars')">👤 Characters</button>
+      <button class="shop-tab inactive" id="tabThemes" onclick="switchShopTab('themes')">🎨 Themes</button>
+    </div>
+    <div id="shopItems" style="width:100%;flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;"></div>
+    <button onclick="sfx();hideOverlay('shopMenu')" class="btn btnRed" style="margin-top:8px;font-size:18px;flex-shrink:0;">Back</button>
+  </div>
+
+  <div id="themesMenu" class="overlay">
+    <h2>🎨 Themes</h2>
+    <p style="font-size:12px;color:#aaa;margin-bottom:8px;">One active at a time.</p>
+    <div id="themeList" style="width:92%;max-width:370px;"></div>
+    <button onclick="sfx();hideOverlay('themesMenu')" class="btn btnRed" style="margin-top:12px;font-size:18px;">Back</button>
+  </div>
+
+  <div id="settingsMenu" class="overlay">
+    <h2>⚙️ Settings</h2>
+    <div class="setting-row">
+      <label>🎵 Music Volume</label>
+      <input type="range" min="0" max="100" value="65" id="volMusic" oninput="updateVolumes()">
+      <span id="volMusicVal">65</span>
+    </div>
+    <div class="setting-row">
+      <label>🔔 SFX Volume</label>
+      <input type="range" min="0" max="100" value="80" id="volSFX" oninput="updateVolumes()">
+      <span id="volSFXVal">80</span>
+    </div>
+    <div class="setting-row" style="align-items:flex-start;flex-direction:column;gap:6px;">
+      <div style="display:flex;align-items:center;gap:12px;width:100%;">
+        <span style="flex:1;font-size:16px;color:#ffd700;">📋 Auto-copy save file</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="autoCopyToggle" onchange="toggleAutoCopy()">
+          <div class="toggle-track">
+            <span class="toggle-label-on">ON</span>
+            <div class="toggle-knob"></div>
+            <span class="toggle-label-off">OFF</span>
+          </div>
+        </label>
+      </div>
+      <div style="font-size:11px;color:#888;line-height:1.4;max-width:320px;">Your save code is automatically copied to your clipboard every 3 minutes while you play — so it's always ready to paste somewhere safe.</div>
+    </div>
+    <button onclick="sfx();hideOverlay('settingsMenu')" class="btn btnRed" style="margin-top:20px;font-size:18px;">Back</button>
+  </div>
+
+  <div id="saveMenu" class="overlay">
+    <h2>💾 Save / Load</h2>
+    <p style="font-size:13px;color:#aaa;text-align:center;max-width:340px;">Copy this code and paste it back to restore your progress.</p>
+    <textarea id="saveCodeBox" readonly></textarea>
+    <button onclick="copySaveCode()" class="btn btnGreen" style="margin:6px 0;font-size:15px;">📋 Copy Code</button>
+    <p style="font-size:13px;color:#ffd700;margin-top:10px;">Paste a saved code below to load:</p>
+    <textarea id="loadCodeInput" placeholder="Paste code here..."></textarea>
+    <button onclick="loadSaveCode()" class="btn btnYellow" style="margin:6px 0;font-size:15px;color:#000;">⬆️ Load Code</button>
+    <div id="saveMsg" style="font-size:13px;color:#88ff88;min-height:18px;"></div>
+    <button onclick="sfx();hideOverlay('saveMenu')" class="btn btnRed" style="margin-top:8px;font-size:18px;">Back</button>
+  </div>
+
+  <div id="debugMenu" class="overlay" style="background:rgba(0,30,0,0.98);">
+    <h2 style="color:#00ff88;font-family:monospace;font-size:28px;">🛠 DEBUG MODE</h2>
+    <p style="color:#0f0;font-size:13px;font-family:monospace;">All locks bypassed for testing.</p>
+    <div style="display:flex;flex-direction:column;gap:8px;width:88%;max-width:340px;margin-top:10px;">
+      <button class="btn" style="background:#00ff88;color:#000;" onclick="debugUnlockAll()">🔓 Unlock Everything</button>
+      <button class="btn" style="background:#00cc66;color:#000;" onclick="debugMaxCoins()">🪙 Give 9999 Coins</button>
+      <button class="btn" style="background:#cc44ff;color:#fff;" onclick="debugMaxLP()">⭐ Give 9999 LP</button>
+      <button class="btn" style="background:#ffaa00;color:#000;" onclick="debugResetAll()">🗑 Reset All Progress</button>
+      <button class="btn" style="background:#ff4444;color:#fff;" onclick="debugToggleModeNote()">⚡ Toggle God Mode (no collision)</button>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+        <label style="color:#0f0;font-size:13px;font-family:monospace;flex:1;">🎁 Queue Powerup on Start:</label>
+        <select id="debugPuSelect" style="flex:1;background:#111;color:#0f0;border:1px solid #0f0;border-radius:6px;padding:4px;font-family:monospace;font-size:12px;">
+          <option value="">— none —</option>
+          <option value="bonus">+5 Points (food)</option>
+          <option value="life">Extra Life (heart)</option>
+          <option value="doublecoins">2X Coins (12s)</option>
+        </select>
+      </div>
+      <button class="btn" style="background:#00aaff;color:#000;" onclick="debugQueuePowerup()">📦 Queue It (spawns on next Start)</button>
+      <div id="debugNote" style="font-size:12px;color:#0f0;font-family:monospace;min-height:16px;"></div>
+    </div>
+    <button onclick="sfx();hideOverlay('debugMenu')" class="btn" style="margin-top:16px;font-size:17px;background:#333;color:#0f0;">← Back</button>
+  </div>
+
+  <!-- ── MULTIPLAYER (inside #game so border contains it) ── -->
+  <div id="mpContainer" style="display:none;position:absolute;inset:0;z-index:100;flex-direction:column;align-items:center;justify-content:center;">
+
+    <!-- MP Splash (fades in/out during transition) -->
+    <div id="mpSplash" style="position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;opacity:0;transition:opacity 0.5s;pointer-events:none;">
+      <div style="font-family:'Zhi Mang Xing',cursive;font-size:72px;color:#ffd700;text-shadow:4px 4px 0 #b71c1c;">⚔️ Multiplayer</div>
+    </div>
+
+    <!-- MP Menu -->
+    <div id="mpMenu" style="display:none;width:100%;height:100%;flex-direction:column;align-items:center;justify-content:flex-start;padding:14px;box-sizing:border-box;overflow-y:auto;background:url('https://t3.ftcdn.net/jpg/07/94/53/94/360_F_794539452_1W9RpBac8VN4ic7aRKma3QWmEVoLZvCv.jpg') center/cover no-repeat;color:#ffd700;position:relative;">
+      <div style="position:absolute;inset:0;background:rgba(0,0,0,0.72);z-index:0;pointer-events:none;"></div>
+      <div style="position:relative;z-index:1;width:100%;display:flex;flex-direction:column;align-items:center;">
+      <h2 style="font-family:'Zhi Mang Xing',cursive;font-size:34px;margin:0 0 8px;text-shadow:3px 3px 0 #b71c1c;">⚔️ Multiplayer</h2>
+      <div style="display:flex;gap:10px;width:100%;max-width:860px;margin-bottom:8px;">
+        <!-- P1 -->
+        <div style="flex:1;background:rgba(255,215,0,0.08);border:2px solid #ffd700;border-radius:12px;padding:10px;text-align:center;min-width:0;">
+          <div style="font-size:12px;color:#aaa;margin-bottom:4px;">PLAYER 1</div>
+          <input id="mp_p1name" type="text" maxlength="16" value="Player 1" style="background:#1a2a3a;color:#ffd700;border:2px solid #ffd700;border-radius:7px;font-size:16px;font-weight:bold;text-align:center;padding:4px 6px;width:130px;">
+          <button class="btn btnYellow" style="font-size:11px;padding:3px 8px;margin-top:4px;display:block;margin-left:auto;margin-right:auto;" onclick="mpSaveName(1)">💾 Save</button>
+          <select id="mp_p1saved" style="background:#111;color:#ffd700;border:1px solid #ffd700;border-radius:6px;font-size:11px;padding:2px;width:100%;margin-top:4px;" onchange="mpLoadSavedName(1)"><option value="">— saved —</option></select>
+          <div id="mp_p1stats" style="font-size:11px;color:#aaa;margin-top:4px;line-height:1.5;"></div>
+          <div style="margin-top:6px;font-size:13px;color:#88ff88;">Key: <b id="mp_p1key_display">—</b></div>
+          <button class="btn btnBlue" style="font-size:11px;padding:3px 10px;margin-top:4px;" onclick="mpBindKey(1)">🎮 Set Key</button>
+          <div style="margin-top:6px;font-size:12px;color:#aaa;">Character:</div>
+          <img id="mp_p1charimg" src="" style="width:46px;height:46px;border-radius:50%;border:2px solid #ffd700;margin-top:3px;">
+          <div id="mp_p1charname" style="font-size:11px;color:#ffd700;margin-top:2px;"></div>
+        </div>
+        <!-- Match options (center) -->
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;">
+          <div style="background:rgba(255,215,0,0.08);border:2px solid #ffd700;border-radius:10px;padding:6px 12px;text-align:center;">
+            <div style="font-size:10px;color:#aaa;margin-bottom:3px;">MODE</div>
+            <button class="btn btnOrange" id="mpModeBtn" onclick="mpToggleMode()" style="font-size:12px;padding:3px 12px;">Normal</button>
+          </div>
+          <div style="background:rgba(255,215,0,0.08);border:2px solid #ffd700;border-radius:10px;padding:6px 12px;text-align:center;">
+            <div style="font-size:10px;color:#aaa;margin-bottom:3px;">LIVES EACH</div>
+            <div style="display:flex;gap:4px;">
+              <button class="btn" id="mpLives1" onclick="mpSetLives(1)" style="font-size:12px;padding:2px 7px;background:#555;color:#fff;">1</button>
+              <button class="btn" id="mpLives3" onclick="mpSetLives(3)" style="font-size:12px;padding:2px 7px;background:#ffd700;color:#000;">3</button>
+              <button class="btn" id="mpLives5" onclick="mpSetLives(5)" style="font-size:12px;padding:2px 7px;background:#555;color:#fff;">5</button>
+              <button class="btn" id="mpLives10" onclick="mpSetLives(10)" style="font-size:12px;padding:2px 7px;background:#555;color:#fff;">10</button>
+            </div>
+          </div>
+          <button class="btn btnGreen" style="font-size:15px;padding:7px 22px;" onclick="mpStartMatch()">▶ START</button>
+          <button class="btn btnYellow" style="font-size:11px;" onclick="mpChangeChars()">👤 Characters</button>
+          <button class="btn btnBlue" style="font-size:11px;" onclick="sfx();showOverlay('settingsMenu')">⚙️ Settings</button>
+          <button class="btn" style="font-size:11px;background:#555;" onclick="sfx();mpResetOptions()">↺ Reset</button>
+          <button class="btn btnRed" style="font-size:11px;" onclick="sfx();exitMultiplayer()">🏠 Home</button>
+          <div id="mpMenuNote" style="font-size:11px;color:#ff8888;min-height:16px;text-align:center;"></div>
+        </div>
+        <!-- P2 -->
+        <div style="flex:1;background:rgba(100,150,255,0.08);border:2px solid #67e8f9;border-radius:12px;padding:10px;text-align:center;min-width:0;">
+          <div style="font-size:12px;color:#aaa;margin-bottom:4px;">PLAYER 2</div>
+          <input id="mp_p2name" type="text" maxlength="16" value="Player 2" style="background:#1a2a3a;color:#67e8f9;border:2px solid #67e8f9;border-radius:7px;font-size:16px;font-weight:bold;text-align:center;padding:4px 6px;width:130px;">
+          <button class="btn btnBlue" style="font-size:11px;padding:3px 8px;margin-top:4px;display:block;margin-left:auto;margin-right:auto;" onclick="mpSaveName(2)">💾 Save</button>
+          <select id="mp_p2saved" style="background:#111;color:#67e8f9;border:1px solid #67e8f9;border-radius:6px;font-size:11px;padding:2px;width:100%;margin-top:4px;" onchange="mpLoadSavedName(2)"><option value="">— saved —</option></select>
+          <div id="mp_p2stats" style="font-size:11px;color:#aaa;margin-top:4px;line-height:1.5;"></div>
+          <div style="margin-top:6px;font-size:13px;color:#88ccff;">Key: <b id="mp_p2key_display">—</b></div>
+          <button class="btn btnBlue" style="font-size:11px;padding:3px 10px;margin-top:4px;" onclick="mpBindKey(2)">🎮 Set Key</button>
+          <div style="margin-top:6px;font-size:12px;color:#aaa;">Character:</div>
+          <img id="mp_p2charimg" src="" style="width:46px;height:46px;border-radius:50%;border:2px solid #67e8f9;margin-top:3px;">
+          <div id="mp_p2charname" style="font-size:11px;color:#67e8f9;margin-top:2px;"></div>
+        </div>
+      </div>
+      </div><!-- end z-index wrapper -->
+    </div>
+
+    <!-- MP Game Area -->
+    <div id="mpGameArea" style="display:none;width:100%;height:100%;position:relative;overflow:hidden;background:url('https://t3.ftcdn.net/jpg/07/94/53/94/360_F_794539452_1W9RpBac8VN4ic7aRKma3QWmEVoLZvCv.jpg') center/cover no-repeat;">
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:12px;padding:10px;box-sizing:border-box;">
+        <!-- P1 canvas: internal 420x720, CSS scaled to 0.88 = 370x634 visual -->
+        <div style="position:relative;flex-shrink:0;width:370px;height:634px;overflow:hidden;border:4px solid #ffd700;border-radius:8px;">
+          <canvas id="mpC1" width="420" height="720" style="display:block;transform-origin:top left;transform:scale(0.88);"></canvas>
+          <div id="mpOverlay1" style="display:none;position:absolute;inset:0;background:#000;flex-direction:column;align-items:center;justify-content:center;z-index:5;">
+            <div style="font-family:'Zhi Mang Xing',cursive;font-size:38px;color:#ff4444;text-shadow:3px 3px 0 #000;">游戏结束</div>
+            <div id="mpP1GOScore" style="font-size:17px;color:#fff;margin-top:5px;"></div>
+          </div>
+        </div>
+        <!-- P2 canvas: same -->
+        <div style="position:relative;flex-shrink:0;width:370px;height:634px;overflow:hidden;border:4px solid #67e8f9;border-radius:8px;">
+          <canvas id="mpC2" width="420" height="720" style="display:block;transform-origin:top left;transform:scale(0.88);"></canvas>
+          <div id="mpOverlay2" style="display:none;position:absolute;inset:0;background:#000;flex-direction:column;align-items:center;justify-content:center;z-index:5;">
+            <div style="font-family:'Zhi Mang Xing',cursive;font-size:38px;color:#ff4444;text-shadow:3px 3px 0 #000;">游戏结束</div>
+            <div id="mpP2GOScore" style="font-size:17px;color:#fff;margin-top:5px;"></div>
+          </div>
+        </div>
+      </div>
+      <div id="mpCountdown" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;pointer-events:none;z-index:20;background:#000;">
+        <div id="mpCountdownNum" style="font-family:'Zhi Mang Xing',cursive;font-size:130px;color:#ffd700;text-shadow:6px 6px 0 #000;"></div>
+      </div>
+    </div>
+
+    <!-- MP End Screen -->
+    <div id="mpEndScreen" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;flex-direction:column;z-index:30;">
+      <div id="mpEndTitle" style="font-family:'Zhi Mang Xing',cursive;font-size:48px;color:#ffd700;text-shadow:4px 4px 0 #b71c1c;margin-bottom:14px;"></div>
+      <div style="display:flex;gap:40px;margin-bottom:18px;">
+        <div style="text-align:center;">
+          <div id="mpEndP1Name" style="font-size:18px;font-weight:bold;color:#ffd700;"></div>
+          <div id="mpEndP1Score" style="font-size:28px;color:#fff;"></div>
+          <div id="mpEndP1Session" style="font-size:13px;margin-top:3px;"></div>
+        </div>
+        <div style="text-align:center;">
+          <div id="mpEndP2Name" style="font-size:18px;font-weight:bold;color:#67e8f9;"></div>
+          <div id="mpEndP2Score" style="font-size:28px;color:#fff;"></div>
+          <div id="mpEndP2Session" style="font-size:13px;margin-top:3px;"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btnGreen" style="font-size:15px;padding:7px 22px;" onclick="mpRematch()">▶ Rematch</button>
+        <button class="btn btnRed" style="font-size:13px;" onclick="mpBackToMenu()">← Menu</button>
+      </div>
+    </div>
+
+    <!-- Key bind prompt -->
+    <div id="mpKeyPrompt" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;flex-direction:column;z-index:50;">
+      <div id="mpKeyPromptText" style="font-size:22px;color:#ffd700;text-align:center;margin-bottom:10px;"></div>
+      <div style="font-size:13px;color:#aaa;text-align:center;">press any key, or click the mouse<br>(letters, numbers, space, arrows, enter, shift)</div>
+    </div>
+
+    <!-- MP Char Select -->
+    <div id="mpCharSelect" style="display:none;position:absolute;inset:0;background:rgba(10,10,30,0.98);align-items:center;justify-content:center;flex-direction:column;z-index:40;padding:16px;box-sizing:border-box;">
+      <div id="mpCharSelectTitle" style="font-family:'Zhi Mang Xing',cursive;font-size:30px;color:#ffd700;margin-bottom:10px;text-shadow:3px 3px 0 #b71c1c;"></div>
+      <div id="mpCharGrid" style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:700px;overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <!-- Home exit overlay (inside #game, fades in during shrink back) -->
+  <div id="mpExitOverlay" style="display:none;position:absolute;inset:0;background:#000;z-index:200;align-items:center;justify-content:center;opacity:0;transition:opacity 0.5s;">
+    <div style="font-family:'Zhi Mang Xing',cursive;font-size:52px;color:#ffd700;text-shadow:4px 4px 0 #b71c1c;">🏠 Home Menu</div>
+  </div>
+
+</div><!-- END #game -->
+
+<!-- ── Audio ── -->
+<audio id="mpMusic" loop><source src="https://ptnahfrpbnfpbyryjrav.supabase.co/storage/v1/object/public/the%20bucket/battlemusic.mp3" type="audio/mpeg"></audio>
+<audio id="menuMusic" loop><source src="https://ptnahfrpbnfpbyryjrav.supabase.co/storage/v1/object/public/the%20bucket/Untitled%20Session%201_mixdown.mp3" type="audio/mpeg"></audio>
+<audio id="bugsMenuMusic" loop><source src="https://ptnahfrpbnfpbyryjrav.supabase.co/storage/v1/object/public/the%20bucket/dirt%20bug.mp3" type="audio/mpeg"></audio>
+<audio id="bjbMenuMusicNew" loop><source src="https://ptnahfrpbnfpbyryjrav.supabase.co/storage/v1/object/public/the%20bucket/Sequence%2022_1.mp3" type="audio/mpeg"></audio>
+<audio id="trafficMenuMusic" loop><source src="https://ptnahfrpbnfpbyryjrav.supabase.co/storage/v1/object/public/the%20bucket/Disco%20Lounge.mp3" type="audio/mpeg"></audio>
+<audio id="christmasMusic" loop><source src="https://ptnahfrpbnfpbyryjrav.supabase.co/storage/v1/object/public/the%20bucket/14.%20White%20Christmas.mp3" type="audio/mpeg"></audio>
+<audio id="bgMusic" loop><source src="https://ptnahfrpbnfpbyryjrav.supabase.co/storage/v1/object/public/the%20bucket/01.01.%20Song%20Of%20The%20Shepherds.mp3" type="audio/mpeg"></audio>
+<audio id="lumberghMusic" loop><source src="https://ptnahfrpbnfpbyryjrav.supabase.co/storage/v1/object/public/the%20bucket/So%20You%20Wanna%20Be%20Hardcore.mp3" type="audio/mpeg"></audio>
+<audio id="bjbMenuMusic" loop><source src="https://archive.org/download/kako-random-w9lgdg/%E5%A4%A9%E6%B0%97%E4%BA%88%E5%A0%B1%20-%20%E3%81%B2%E3%81%BE%E3%82%8F%E3%82%8A%E8%A1%9B%E6%98%9F-%20Kako%20Random%20-%2002%20Daylight%20Cycling.mp3" type="audio/mpeg"></audio>
+<audio id="btnSFX"><source src="https://ptnahfrpbnfpbyryjrav.supabase.co/storage/v1/object/public/the%20bucket/Beep.mp3" type="audio/mpeg"></audio>
+<audio id="buzzSFX"><source src="https://archive.org/download/Red_Library_Bells_Horns_Whistles/R09-13-Apartment%20Buzzer.mp3" type="audio/mpeg"></audio>
+<audio id="purchaseSFX"><source src="https://ptnahfrpbnfpbyryjrav.supabase.co/storage/v1/object/public/the%20bucket/register%20for%20cash.mp3" type="audio/mpeg"></audio>
+<audio id="deniedSFX"><source src="https://ptnahfrpbnfpbyryjrav.supabase.co/storage/v1/object/public/the%20bucket/Lego%20Star%20Wars%20-%20C-3PO%20Denied%20sound.mp3" type="audio/mpeg"></audio>
+<audio id="achSFX"><source src="https://ptnahfrpbnfpbyryjrav.supabase.co/storage/v1/object/public/the%20bucket/Eagle%20Cry%20Sound%20Effect%20(128kbps).mp3" type="audio/mpeg"></audio>
+<audio id="chestDrumSFX"><source src="https://ptnahfrpbnfpbyryjrav.supabase.co/storage/v1/object/public/the%20bucket/Drum%20Roll%20-%20Gaming%20Sound%20Effect%20(HD).mp3" type="audio/mpeg"></audio>
+<audio id="chestDingSFX"><source src="https://ptnahfrpbnfpbyryjrav.supabase.co/storage/v1/object/public/the%20bucket/Cartoon%20Ding%20Sound%20Effect%202%20(320kbps).mp3" type="audio/mpeg"></audio>
+<audio id="scoreSound"><source src="https://www.orangefreesounds.com/wp-content/uploads/2015/09/Windows-XP-Notification.mp3" type="audio/mpeg"></audio>
+
+<script>
+// ── Mobile detection ──────────────────────────────────────────────────────────
+const isMobile = /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent)
+  || (navigator.maxTouchPoints > 1 && window.innerWidth <= 900);
+if(isMobile){
+  document.body.classList.add('mobile');
+  // Scale #game canvas to fill mobile viewport correctly
+  // Canvas internal coords stay 420x720, CSS scales it
+  var gameDiv = document.getElementById('game');
+  function resizeMobile(){
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const scale = Math.min(vw/420, vh/720);
+    const w = Math.round(420*scale);
+    const h = Math.round(720*scale);
+    gameDiv.style.width = w+'px';
+    gameDiv.style.height = h+'px';
+    // Center horizontally if narrower than viewport
+    gameDiv.style.marginLeft = Math.max(0,Math.round((vw-w)/2))+'px';
+  }
+  resizeMobile();
+  window.addEventListener('resize', resizeMobile);
+  window.addEventListener('orientationchange', ()=>{ setTimeout(resizeMobile,100); });
+  // Show mobile-only buttons
+  const fgBtn=document.getElementById('fgHomeBtn');
+  if(fgBtn) fgBtn.style.display='block';
+}
+
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+const menuMusic=document.getElementById('menuMusic');
+const bugsMenuMusic=document.getElementById('bugsMenuMusic');
+const bjbMenuMusicNew=document.getElementById('bjbMenuMusicNew');
+const trafficMenuMusic=document.getElementById('trafficMenuMusic');
+// Traffic music loops back to 2:13 (133s) when it reaches that point naturally
+// trafficMenuMusic now uses loop attribute directly
+const bgMusic=document.getElementById('bgMusic');
+const lumberghMusic=document.getElementById('lumberghMusic');
+// Lumbergh music: starts at 91s, loops back to 91s at 2:10 (130s)
+lumberghMusic.addEventListener('timeupdate',()=>{
+  if(lumberghMusic.currentTime>=130) lumberghMusic.currentTime=91;
+});
+const bjbMenuMusic=document.getElementById('bjbMenuMusic');
+const christmasMusic=document.getElementById('christmasMusic');
+const scoreSFX=document.getElementById('scoreSound');
+const btnSFX=document.getElementById('btnSFX');
+const purchaseSFX=document.getElementById('purchaseSFX');
+const deniedSFX=document.getElementById('deniedSFX');
+const achSFX=document.getElementById('achSFX');
+const chestDrumSFX=document.getElementById('chestDrumSFX');
+const chestDingSFX=document.getElementById('chestDingSFX');
+function playDeniedSFX(){ try{ deniedSFX.volume=Math.min(1,volSFX*1.2); deniedSFX.currentTime=0.33; deniedSFX.play().catch(()=>{}); }catch(e){} }
+
+let splashDismissed=false;
+function dismissSplash(){
+  if(splashDismissed) return;
+  splashDismissed=true;
+  sessionStorage.setItem('fgSplashSeen','1');
+  document.getElementById('splashScreen').style.display='none';
+  applyTitleTheme();
+  const track=getMenuTrack();
+  track.volume=volMusic; track.play().catch(()=>{});
+}
+// If returning from a hard reload (debug reset), skip splash and try to play music
+if(sessionStorage.getItem('fgSplashSeen')){
+  splashDismissed=true;
+  document.getElementById('splashScreen').style.display='none';
+  // Try autoplay immediately; if blocked, resume on next user gesture
+  setTimeout(()=>{
+    const track=getMenuTrack();
+    if(track.paused){
+      track.volume=volMusic;
+      track.play().catch(()=>{
+        // Autoplay blocked - wait for gesture
+        const resumeMusic=()=>{
+          if(gameStarted) return;
+          const t=getMenuTrack();
+          if(t.paused){ t.volume=volMusic; t.play().catch(()=>{}); }
+          document.removeEventListener('click',resumeMusic,true);
+          document.removeEventListener('keydown',resumeMusic,true);
+        };
+        document.addEventListener('click',resumeMusic,true);
+        document.addEventListener('keydown',resumeMusic,true);
+      });
+    }
+  },100);
+}
+// ── Web Audio SFX for zero-latency button sounds on mobile ────────────────────
+let _audioCtx=null, _btnSFXBuffer=null;
+function getAudioCtx(){
+  if(!_audioCtx) _audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  if(_audioCtx.state==='suspended') _audioCtx.resume();
+  return _audioCtx;
+}
+// Pre-fetch and decode the beep so it's ready instantly
+fetch('https://ptnahfrpbnfpbyryjrav.supabase.co/storage/v1/object/public/the%20bucket/Beep.mp3')
+  .then(r=>r.arrayBuffer()).then(buf=>getAudioCtx().decodeAudioData(buf))
+  .then(decoded=>{ _btnSFXBuffer=decoded; }).catch(()=>{});
+// Unlock audio context on first touch (mobile requirement)
+document.addEventListener('touchstart',()=>{ getAudioCtx(); },{once:true,passive:true});
+document.addEventListener('click',()=>{ getAudioCtx(); },{once:true});
+
+function sfx(){
+  // Try Web Audio first (instant, no latency)
+  if(_btnSFXBuffer && _audioCtx){
+    try{
+      const src=_audioCtx.createBufferSource();
+      const gain=_audioCtx.createGain();
+      src.buffer=_btnSFXBuffer;
+      gain.gain.value=Math.min(1,volSFX*1.4);
+      src.connect(gain); gain.connect(_audioCtx.destination);
+      src.start(0); return;
+    }catch(e){}
+  }
+  // Fallback to <audio> element
+  try{ btnSFX.volume=Math.min(1,volSFX*1.4); btnSFX.currentTime=0; btnSFX.play().catch(()=>{}); }catch(e){}
+}
+function playPurchaseSFX(){
+  try{
+    purchaseSFX.volume=Math.min(1,volSFX*1.2);
+    purchaseSFX.currentTime=2; // start at 2s (the register ding part)
+    purchaseSFX.play().catch(()=>{});
+    setTimeout(()=>{ try{purchaseSFX.pause();purchaseSFX.currentTime=0;}catch(e){} },2000);
+  }catch(e){}
+}
+purchaseSFX.preload='auto';
+const titleScreen=document.getElementById('titleScreen');
+const normalHSEl=document.getElementById('normalHS');
+const lumberghHSEl=document.getElementById('lumberghHS');
+const coinCountEl=document.getElementById('coinCount');
+
+// ── Volume settings ───────────────────────────────────────────────────────────
+let volMusic=parseFloat(localStorage.getItem('fgVolMusic')||'0.65');
+let volSFX=parseFloat(localStorage.getItem('fgVolSFX')||'0.8');
+document.getElementById('volMusic').value=Math.round(volMusic*100);
+document.getElementById('volMusicVal').textContent=Math.round(volMusic*100);
+document.getElementById('volSFX').value=Math.round(volSFX*100);
+document.getElementById('volSFXVal').textContent=Math.round(volSFX*100);
+function updateVolumes(){
+  volMusic=document.getElementById('volMusic').value/100;
+  volSFX=document.getElementById('volSFX').value/100;
+  document.getElementById('volMusicVal').textContent=Math.round(volMusic*100);
+  document.getElementById('volSFXVal').textContent=Math.round(volSFX*100);
+  localStorage.setItem('fgVolMusic',volMusic);
+  localStorage.setItem('fgVolSFX',volSFX);
+  [menuMusic,bgMusic,lumberghMusic].forEach(a=>{
+    if(!a.paused) a.volume=volMusic;
+  });
+  scoreSFX.volume=volSFX;
+}
+
+// ── Persistent state ──────────────────────────────────────────────────────────
+let achievements=JSON.parse(localStorage.getItem('flappyGeterAchievements'))||{
+  warrior:false,everything:false,world:false,greatThings:false,
+  lumberghMaster:false,boltonFired:false,century:false,salUnlocked:false,savvyUnlocked:false,execStandard:false,ultimateGamer:false
+};
+let highScores=JSON.parse(localStorage.getItem('flappyGeterHighScores'))||{normal:0,lumbergh:0};
+let totalCoins=parseInt(localStorage.getItem('flappyGeterCoins'))||0;
+let totalPowerUpsCollected=parseInt(localStorage.getItem('flappyGeterPowerUps'))||0;
+let shopOwned=JSON.parse(localStorage.getItem('flappyGeterShop'))||{bjb:false,supper:false,bugs:false,traffic:false,homer:false,cobson:false,king:false,christmas:false,nick:false,lion:false,chungus:false};
+let activeTheme=localStorage.getItem('flappyGeterTheme')||'none';
+
+normalHSEl.textContent=highScores.normal;
+lumberghHSEl.textContent=highScores.lumbergh;
+coinCountEl.textContent=totalCoins;
+
+// ── Character definitions ─────────────────────────────────────────────────────
+// unlock types: 'free'|'achievement'|'shop'
+// classes: classic=yellow, shop=green
+const CHARS=[
+  {name:'geter',    cls:'Classic', clsColor:'#ffd700', src:'https://cdn.imgchest.com/files/1892f61b9ac7.png',           unlock:'free'},
+  {name:'larry',    cls:'Classic', clsColor:'#ffd700', src:'https://cdn.imgchest.com/files/cd4f610371e3.png',           unlock:'achievement', ach:'warrior'},
+  {name:'dishwasher',cls:'Classic',clsColor:'#ffd700', src:'https://cdn.imgchest.com/files/04875ca4f40f.png',          unlock:'achievement', ach:'everything'},
+  {name:'slash',    cls:'Classic', clsColor:'#ffd700', src:'https://cdn.imgchest.com/files/dad54d696b5c.png',           unlock:'achievement', ach:'world'},
+  {name:'enzio',    cls:'Classic', clsColor:'#ffd700', src:'https://cdn.imgchest.com/files/8f3adda01dc6.png',           unlock:'achievement', ach:'greatThings'},
+  {name:'lumbergh', cls:'Classic', clsColor:'#ffd700', src:'https://www.insidermemes.com/_next/image?url=https%3A%2F%2Finsidermemes-prod-bucket.sfo3.digitaloceanspaces.com%2Finsidermemes-prod-bucket%2Fpublic%2F2025_09_22_22_08_15_931021_IMG_8530.jpg&w=3840&q=75', unlock:'achievement', ach:'lumberghMaster'},
+  {name:'michael bolton',cls:'Classic',clsColor:'#ffd700',src:'https://preview.redd.it/michael-bolton-office-space-1999-v0-3vlofpz3ye4f1.jpg?width=270&format=pjpg&auto=webp&s=2a24ed27b57c11d9bc1deb057be7651dfe8c4be1', unlock:'achievement', ach:'boltonFired'},
+  {name:'supper',   cls:'Shop', clsColor:'#00c9a7',    src:'https://blog.resy.com/wp-content/uploads/2023/09/230821_BangkokSupperClub_37779-1-2000x1125.jpg', unlock:'shop', shopKey:'supper'},
+  {name:'sebulba',  cls:'Classic', clsColor:'#ffd700', src:'https://www.realmofdarkness.net/sb/wp-content/uploads/2018/09/swrr-sebulba-01.png', unlock:'achievement', ach:'century'},
+  {name:'homer pepe',cls:'Shop', clsColor:'#00c9a7',   src:'https://cdn.imgchest.com/files/b605c15f81b8.png',          unlock:'shop', shopKey:'homer'},
+  {name:'cobson',   cls:'Shop', clsColor:'#00c9a7',    src:'https://i.redd.it/the-original-picture-used-for-the-soyjak-variant-cobson-v0-j1qjdgl4y4ye1.png?width=721&format=png&auto=webp&s=2ea4aa85248cea9ca0cf29aed8dcb2b919ab5a53', unlock:'shop', shopKey:'cobson'},
+  {name:'the kindly king',cls:'Shop',clsColor:'#00c9a7',src:'https://i.graphicmama.com/uploads/2023/3/64268082609d1-handsome-king-cartoom-character.png', unlock:'shop', shopKey:'king'},
+  {name:'sal',    cls:'Classic', clsColor:'#ffd700', src:'https://cdn.shortpixel.ai/spai/q_lossless+w_525+to_auto+ret_img/www.celebrity-cutouts.com/wp-content/uploads/2022/03/sal-vulcano-jumper-buddy-cardboard-cutout-450x450.png', unlock:'achievement', ach:'salUnlocked'},
+  {name:'savvy businessman #3', cls:'Classic', clsColor:'#ffd700', src:'https://cdn.imgchest.com/files/7d741cf506d2.png', unlock:'achievement', ach:'savvyUnlocked'},
+  {name:'nick',                 cls:'Shop',    clsColor:'#00c9a7', src:'https://cdn.imgchest.com/files/e6a8b29b02e3.png', unlock:'shop', shopKey:'nick'},
+  {name:'executive standard logo', cls:'Classic', clsColor:'#ffd700', src:'https://cdn.imgchest.com/files/a17d3b42995d.png', unlock:'achievement', ach:'execStandard'},
+  {name:'the smart lion',       cls:'Shop',    clsColor:'#00c9a7', src:'https://cdn.imgchest.com/files/41be3cea9d30.png', unlock:'shop', shopKey:'lion'},
+  {name:'the glitch chungus triplets',cls:'Shop',clsColor:'#00c9a7',src:'https://cdn.imgchest.com/files/13647eff4fc8.png', unlock:'shop', shopKey:'chungus'},
+  // ── Chest characters ──
+  {name:'pillar',               cls:'Common',  clsColor:'#e8894a', src:'',                                                                                                    unlock:'chest', chestKey:'pillar'},
+  {name:'bluefellow',           cls:'Common',  clsColor:'#e8894a', src:'https://cdn.imgchest.com/files/537231604eee.png',        unlock:'chest', chestKey:'bluefellow'},
+  {name:'fat lion',             cls:'Common',  clsColor:'#e8894a', src:'https://cdn.imgchest.com/files/810ce3d611c4.jpg', unlock:'chest', chestKey:'fatlion'},
+  {name:'mountain dew voltage', cls:'Common',  clsColor:'#e8894a', src:'https://cdn.imgchest.com/files/c030e1178880.webp', unlock:'chest', chestKey:'mdew'},
+  {name:'circular metal texture',cls:'Common', clsColor:'#e8894a', src:'https://ptnahfrpbnfpbyryjrav.supabase.co/storage/v1/object/public/the%20bucket/Askjhgfytreset_6.png', unlock:'chest', chestKey:'metal'},
+  {name:'He thought school was for one day only! He MAD!!',cls:'Common',clsColor:'#e8894a',src:'https://cdn.imgchest.com/files/9c162cacc48d.png', unlock:'chest', chestKey:'hemad'},
+  {name:'SPRITE LOL',           cls:'Uncommon',clsColor:'#66ff88', src:'https://cdn.imgchest.com/files/36e6394330ab.png',        unlock:'chest', chestKey:'sprite'},
+  {name:'Big Blue John',        cls:'Uncommon',clsColor:'#66ff88', src:'https://cdn.imgchest.com/files/c208643e9771.png',           unlock:'chest', chestKey:'bbj'},
+  {name:'Big Blue John (side view)',cls:'Uncommon',clsColor:'#66ff88',src:'https://cdn.imgchest.com/files/c608730473b9.png',    unlock:'chest', chestKey:'bbjside'},
+  {name:'Big Sneezer',          cls:'Uncommon',clsColor:'#66ff88', src:'https://cdn.imgchest.com/files/5111a6dfa995.png',     unlock:'chest', chestKey:'sneezer'},
+  {name:'my OC',                cls:'Rare',    clsColor:'#c084fc', src:'https://cdn.imgchest.com/files/265aa041e16a.png',          unlock:'chest', chestKey:'myoc'},
+  {name:'normal lion',          cls:'Rare',    clsColor:'#c084fc', src:'https://cdn.imgchest.com/files/f6846247d2b1.png',              unlock:'chest', chestKey:'normallion'},
+  {name:'game',                 cls:'Rare',      clsColor:'#c084fc',src:'https://ptnahfrpbnfpbyryjrav.supabase.co/storage/v1/object/public/the%20bucket/vvvv.png',             unlock:'chest', chestKey:'game'},
+  {name:'emerald lumbergh',     cls:'Classic', clsColor:'#ffd700', src:'https://cdn.imgchest.com/files/e40638a081bd.png', unlock:'achievement', ach:'ultimateGamer'},
+  {name:'Bronze Lumbergh',      cls:'Ultra Rare',clsColor:'#f87171', src:'https://cdn.imgchest.com/files/eb597c7b9814.png', unlock:'chest', chestKey:'bronzelumbergh'},
+  {name:'silver lumbergh',      cls:'Ultra Rare',clsColor:'#f87171', src:'https://cdn.imgchest.com/files/6efa6efe2cec.png',unlock:'chest', chestKey:'silverlumbergh'},
+  {name:'Golden Lumbergh',      cls:'Ultra Mega Super Rare',clsColor:'#ffd700',src:'https://cdn.imgchest.com/files/f5b70a9428c1.png',unlock:'chest', chestKey:'goldenlumbergh'},
+];
+const characterImages=CHARS.map(c=>{ const i=new Image(); i.src=c.src; return i; });
+let selectedCharacter=parseInt(localStorage.getItem('flappyGeterCharacter'))||0;
+if(selectedCharacter>=CHARS.length) selectedCharacter=0;
+
+// ── Special images ────────────────────────────────────────────────────────────
+const enemyImg    =new Image(); enemyImg.src    ="https://pbs.twimg.com/profile_images/1009932396333031424/8FzKlCfB_400x400.jpg";
+const fastEnemyImg=new Image(); fastEnemyImg.src="https://www.darbydan.com/wp-content/uploads/2024/10/219231-Gufo-Confo-WEB-1.png";
+const circleEnemyImg=new Image(); circleEnemyImg.src="https://openclipart.org/image/800px/183857";
+const gameOverMeme=new Image(); gameOverMeme.src="https://i.imgflip.com/an4b0p.jpg";
+const bonusPuImg  =new Image(); bonusPuImg.src  ="https://tb-static.uber.com/prod/image-proc/processed_images/c264bb9f02bfab96b903a9db4592af74/b4665c191b34baf3d0e0fa45dfdd3d1d.jpeg";
+const extraLifeImg=new Image(); extraLifeImg.src="https://cdn.imgchest.com/files/1885c2664166.jpg";
+const coinImg     =new Image(); coinImg.src     ="https://stonexbullion.com/product/image/1NU03/1-oz-gold-coin-bitcoin-1.webp";
+const fiveCoinImg =new Image(); fiveCoinImg.src ="https://upload.wikimedia.org/wikipedia/commons/8/83/5_Yen_Heisei.png";
+const doubleCoinImg=new Image(); doubleCoinImg.src="https://voca-land.sgp1.cdn.digitaloceanspaces.com/0/1757683858229/03d6da98.jpg";
+const lumberghPtImg=new Image(); lumberghPtImg.src="https://cdn.imgchest.com/files/3d92861b0622.png";
+const cockroachImg=new Image(); cockroachImg.src="https://arrestapestservices.com/wp-content/uploads/2022/01/German-Cockroach-Service-Page-Image.png";
+const bedBugImg=new Image(); bedBugImg.src="https://prontopest.net/wp-content/uploads/2014/12/Bed-Bug-e1419041061262.png";
+const trafficCityImg=new Image(); trafficCityImg.src="https://media.timeout.com/images/106140613/image.jpg";
+
+// ── Backgrounds ───────────────────────────────────────────────────────────────
+const bgSets={
+  default:[
+    "https://media.audleytravel.com/-/media/images/home/north-asia-and-russia/china/country-guides/the-slow-side-of-china/istock_586369598_china_li_river_guilin.webp?q=79&w=800&h=571",
+    "https://media.istockphoto.com/id/497443692/photo/landscape-of-guilin.jpg?s=612x612&w=0&k=20&c=zPqcHT0bPxW45uhE0yD8pOVmlRyavf_dTWfvPmhR1UA=",
+    "https://as1.ftcdn.net/jpg/03/69/88/14/1000_F_369881407_kCGiyvY0bo80KY35Ff3IRQo1qrlr1V4c.jpg",
+  ],
+  bjb:[
+    "https://cdn.imgchest.com/files/befb21ec174e.png",
+    "https://cdn.imgchest.com/files/d57003d3ed27.png",
+    "https://cdn.imgchest.com/files/bbe42c320b5c.gif",
+    "https://cdn.imgchest.com/files/025b180778a8.png",
+    "https://cdn.imgchest.com/files/54d1e871d061.png"
+  ],
+  bugs:[
+    "https://www.treehugger.com/thmb/8he5rIw5n2ukJ44XXOHK7L-6PIc=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/__opt__aboutcom__coeus__resources__content_migration__mnn__images__2017__05__lady-bug-on-leaf-e3cd36cdc3024129b61926ddf6ef386e.jpg",
+    "https://www.rd.com/wp-content/uploads/2025/06/GettyImages-1386624445-e1750873416801.jpg",
+    "https://alluneedpest.com/wp-content/uploads/2025/09/storychief-generated-2025-09-30-11-24-15_4e1847995b19385d4fe70b30fabf5cda_2000-768x538.jpeg",
+    "https://upload.wikimedia.org/wikipedia/commons/3/32/Large_milkweed_bug_%2823188%29.jpg",
+    "https://www.southernliving.com/thmb/qyCIXIfHA5FkdC5iPIrLhwLrHuQ=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/GettyImages-657867880-2cd848ec3e76467b8bdd6e49e00ffd3f.jpg"
+  ],
+  traffic:[
+    "https://hips.hearstapps.com/hmg-prod/images/traffic-light-on-foggy-night-royalty-free-image-1694009802.jpg?crop=0.667xw:1.00xh;0,0&resize=1200:*",
+    "https://cdn.prod.website-files.com/65f9ddc0d85e74ddbea4dae3/675164b5981ffcb7c40f8695_trafficlight_cover1.webp",
+    "https://www.familyhandyman.com/wp-content/uploads/2025/07/What-Does-Each-Traffic-Light-Symbol-Mean_GettyImages-2168516574_FT.jpg",
+    "https://media.wired.com/photos/5932578358b0d64bb35d104f/191:100/w_1280,c_limit/trafficlight-ft.jpg",
+    "https://www.wklaw.com/wp-content/uploads/2015/03/red-light.jpg"
+  ],
+  christmas:[
+    "https://cdn.britannica.com/38/196638-050-94E05EF4/Santa-Claus.jpg",
+    "https://thegoldenreport.org/wp-content/uploads/2024/12/christmas-greetings-1629475661.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/8/8f/NativityChristmasLights2.jpg",
+    "https://assets.simpleviewinc.com/sv-grapevine/image/upload/c_fill,f_jpg,g_xy_center,h_786,q_65,w_640,x_953,y_440/v1/clients/grapevine/2025_CCOT_Header_02951a7f-3873-4a7d-86f7-81a3037d6f55.jpg",
+    "https://www.monstertreeservice.com/cms/thumbnails/24/1080x540/sub/19490/images/MTS_OUW_HistoryOfChristmasTrees_Dec23_20231219.jpg",
+    "https://www.thomaskinkade.com/cdn/shop/files/162706_f_GFT_The_Christmas_Festival_11X14_ART_PRINT.jpg?v=1742868406&width=1946",
+    "https://images.surferseo.art/95811fcf-34db-4263-b559-454456e4ac43.png"
+  ]
+};
+function getBgUrls(){ return bgSets[activeTheme]||bgSets.default; }
+let bgUrls=getBgUrls();
+let bgIndex=0,fade=1;
+const currentBg=new Image(),prevBg=new Image(); currentBg.src=bgUrls[0];
+
+// ── Game variables ────────────────────────────────────────────────────────────
+let birdY=200,velocity=-6,score=0;
+let pipes=[],circleEnemies=[],fanObstacles=[],specialPowerUps=[],coins=[],gameOver=false,gameStarted=false;
+let flapGlow=0,gracePeriod=3000,startTime=0,showStartHint=true;
+let isLumberghMode=false,pipesPassed=0,scrollSpeedMult=1,hasExtraLife=false;
+let coinMultiplier=1, doubleCoinsTimer=0; // double coins powerup
+let totalLumberghPts=parseInt(localStorage.getItem('flappyGeterLumberghPts'))||0;
+let trailParticles=[];
+let trailColorCounter=0; // global incrementing counter for stable sequential colors
+let currentAchievement="",messages=[],scorePops=[],explodeParticles=[];
+let debugQueuedPowerup=null;
+let particles=[];
+for(let i=0;i<30;i++) particles.push({x:Math.random()*420,y:Math.random()*720,size:Math.random()*2.5+0.8,speed:Math.random()*0.3+0.08});
+
+const encouragements=[
+  "You're doing great 🌿","The most important thing is to have fun.","I love you 🐸",
+  "Great work!","Keep going gently...","One flap at a time","You got this!",
+  "Breathe and fly","Flow like water","Be present in each moment",
+  "Inner peace is the true victory","The journey itself is the reward",
+  "Let go and soar","Harmony in every flap","You are enough","Smile and flap on",
+  "This too shall pass beautifully","Every flap is a fresh start 🌸",
+  "You are braver than you believe 💪","The sky is not the limit — it's home",
+  "Small steps still move you forward","You make the world better just by being in it 🌟",
+  "Even the river started as a single drop","Fly at your own pace","Proud of you 🥹",
+  "Nothing can stop a determined frog 🐸","You're on a roll!","The best is yet to come ✨",
+  "Mountains bow to those who persist","Courage is one flap at a time",
+  "You have survived every hard day so far 💚","Be the energy you want to receive",
+  "Trust the process 🌊","Stars shine brightest in the dark 🌙",
+  "You are a legend in the making","Keep your head up... literally 🐦",
+  "Flap first, worry never","Today is a great day to be you",
+  "Fortune favors the persistent flapper","Obstacles are just gaps waiting to be cleared",
+  "You were born for this","Good vibes only 🎋","Shine on, little frog 🌞",
+  "Even bamboo bends but does not break 🎍","The Guilin mountains believe in you 🏔️",
+  "Champion energy detected 🏆","Your ancestors are cheering for you",
+  "This moment is yours 🌺","Graceful and unstoppable","Make today count 🌈"
+];
+
+// ── Trails ────────────────────────────────────────────────────────────────────
+const TRAILS=[
+  {id:'cyan',      name:'Sky Blue',  cls:'Classic',  unlock:'free',  draw:'circle',   hue:195, sat:100, lit:70},
+  {id:'red',       name:'Red',       cls:'Classic',  unlock:'free',  draw:'circle',   hue:0,   sat:100, lit:60},
+  {id:'green',     name:'Green',     cls:'Classic',  unlock:'free',  draw:'circle',   hue:120, sat:100, lit:55},
+  {id:'yellow',    name:'Yellow',    cls:'Classic',  unlock:'free',  draw:'circle',   hue:55,  sat:100, lit:60},
+  {id:'orange',    name:'Orange',    cls:'Classic',  unlock:'free',  draw:'circle',   hue:25,  sat:100, lit:60},
+  {id:'pink',      name:'Pink',      cls:'Classic',  unlock:'free',  draw:'circle',   hue:320, sat:100, lit:75},
+  {id:'purple',    name:'Purple',    cls:'Classic',  unlock:'free',  draw:'circle',   hue:270, sat:100, lit:65},
+  {id:'white',     name:'White',     cls:'Classic',  unlock:'free',  draw:'circle',   hue:0,   sat:0,   lit:100},
+  {id:'mud',       name:'FARTING MUD',      cls:'Common',   unlock:'chest', draw:'splat',    colors:['#6b3a1f','#8b5e3c','#a07850'], sparseParticles:true},
+  {id:'evil',      name:'EVIL',             cls:'Common',   unlock:'chest', draw:'circle',   hue:0,   sat:80,  lit:20, hue2:0,  sat2:100,lit2:40},
+  {id:'mint',      name:'MINT CHIP',        cls:'Common',   unlock:'chest', draw:'altCircle',colors:['#7fffd4','#4a2c0a']},
+  {id:'blueyellow',name:'BLUE+YELLOW COLLAB',cls:'Common',  unlock:'chest', draw:'altCircle',colors:['#3b82f6','#ffd700']},
+  {id:'redsquares',name:'RED SQUARES',      cls:'Common',   unlock:'chest', draw:'square',   hue:0,   sat:100, lit:55},
+  {id:'bluesquares',name:'BLUE SQUARES',    cls:'Common',   unlock:'chest', draw:'square',   hue:210, sat:100, lit:60},
+  {id:'greentriangles',name:'GREEN TRIANGLES',cls:'Uncommon',unlock:'chest',draw:'triangle', hue:120, sat:100, lit:50},
+  {id:'snot',      name:'SNOT/BOOGERS',     cls:'Uncommon', unlock:'chest', draw:'splat',    colors:['#7fff00','#adff2f','#55cc00'], sparseParticles:true},
+  {id:'traffictrail',name:'TRAFFIC LIGHT COLORS',cls:'Uncommon',unlock:'chest',draw:'seqCircle',seqColors:['#ff2222','#ffd700','#22ff44']},
+  {id:'checker',   name:'CHECKERBOARD',     cls:'Uncommon', unlock:'chest', draw:'seqSquare',seqColors:['#000000','#ffffff']},
+  {id:'rainbow',   name:'RAINBOW',          cls:'Rare',     unlock:'chest', draw:'rainbow'},
+  {id:'getercolors',name:'GETER COLORS',    cls:'Rare',     unlock:'chest', draw:'altCircle',colors:['#39ff14','#ff69b4']},
+  {id:'stars',     name:'STARS',            cls:'Rare',     unlock:'chest', draw:'star',     hue:55,  sat:100, lit:65},
+];
+let selectedTrail=localStorage.getItem('flappyGeterTrail')||'cyan';
+function getTrailDef(){ return TRAILS.find(t=>t.id===selectedTrail)||TRAILS[0]; }
+
+// Chest owned state
+let chestOwned=JSON.parse(localStorage.getItem('flappyGeterChestOwned'))||{};
+function saveChestOwned(){ localStorage.setItem('flappyGeterChestOwned',JSON.stringify(chestOwned)); }
+function isTrailUnlocked(t){
+  if(t.unlock==='free') return true;
+  // Always read fresh from the live chestOwned object (mutated on unlock)
+  if(t.unlock==='chest') return chestOwned['trail_'+t.id]===true;
+  return false;
+}
+function isCharUnlockedByChest(c){
+  if(c.unlock==='chest') return !!chestOwned['char_'+c.chestKey];
+  return false;
+}
+const CHEST_CHAR_DESCS={
+  pillar:'a pillar from the hit game flappy geter.',
+  bluefellow:"look at this guy. He's weird.",
+  fatlion:'one too many suppers were had by this guy!',
+  mdew:"a delicious pop. don't have any past 1 PM!",
+  metal:'this image was in my files so I added it to the game.',
+  hemad:'He thought school was for one day only! He MAD!!',
+  sprite:'as seen in the iconic sprite bit.',
+  bbj:'In the flesh. finger guns, baby!',
+  bbjside:'as the name suggests.',
+  sneezer:'the dastardly, nasty villain.',
+  myoc:'likes: darkness, evanescence, candy. dislikes: justin bieber, the sun, bedtime being 8 PM.',
+  normallion:'the king of the jungle.',
+  bronzelumbergh:'lumbergh, bronze version.',
+  game:'game',
+  silverlumbergh:'lumbergh, silver version.',
+  goldenlumbergh:'lumbergh, gold version.',
+};
+// Generate pillar image for the 'pillar' chest char
+const pillarCanvas=document.createElement('canvas');
+pillarCanvas.width=58; pillarCanvas.height=58;
+(()=>{
+  const pc=pillarCanvas.getContext('2d');
+  // Main pillar body
+  const g=pc.createLinearGradient(0,0,58,0);
+  g.addColorStop(0,'#6b2e0a'); g.addColorStop(0.5,'#e8894a'); g.addColorStop(1,'#6b2e0a');
+  pc.fillStyle=g; pc.fillRect(6,18,46,40);
+  pc.strokeStyle='rgba(80,20,0,0.55)'; pc.lineWidth=2;
+  for(let y=24;y<58;y+=10){ pc.beginPath();pc.moveTo(6,y);pc.lineTo(52,y);pc.stroke(); }
+  pc.fillStyle='rgba(0,0,0,0.18)'; pc.fillRect(6,18,5,40);
+  pc.fillStyle='rgba(255,255,255,0.10)'; pc.fillRect(47,18,5,40);
+  // Cap (wider darker top piece)
+  const g2=pc.createLinearGradient(0,0,58,18);
+  g2.addColorStop(0,'#8b1a00'); g2.addColorStop(1,'#5a0e00');
+  pc.fillStyle=g2;
+  pc.beginPath(); pc.moveTo(0,8); pc.lineTo(58,8); pc.lineTo(52,18); pc.lineTo(6,18); pc.closePath(); pc.fill();
+  pc.strokeStyle='#ffd700'; pc.lineWidth=1.5;
+  pc.beginPath(); pc.moveTo(0,8); pc.lineTo(58,8); pc.stroke();
+  pc.beginPath(); pc.moveTo(6,18); pc.lineTo(52,18); pc.stroke();
+})();
+const CHARS_PILLAR_IDX=CHARS.findIndex(c=>c.chestKey==='pillar');
+if(CHARS_PILLAR_IDX>=0){
+  const dataUrl=pillarCanvas.toDataURL();
+  CHARS[CHARS_PILLAR_IDX].src=dataUrl;
+  // Also update characterImages so the pillar renders in gameplay
+  characterImages[CHARS_PILLAR_IDX].src=dataUrl;
+}
+function getTrailDef(){ return TRAILS.find(t=>t.id===selectedTrail)||TRAILS[0]; }
+function bjbOn(){ return activeTheme==='bjb'; }
+function bugsOn(){ return activeTheme==='bugs'; }
+function trafficOn(){ return activeTheme==='traffic'; }
+function christmasOn(){ return activeTheme==='christmas'; }
+function getMenuTrack(){
+  if(bugsOn()) return bugsMenuMusic;
+  if(bjbOn()) return bjbMenuMusicNew;
+  if(trafficOn()) return trafficMenuMusic;
+  if(christmasOn()) return christmasMusic;
+  return menuMusic;
+}
+
+// Snow particles for christmas theme
+let snowflakes=[];
+for(let i=0;i<60;i++) snowflakes.push({x:Math.random()*420,y:Math.random()*720,size:Math.random()*3+1,speed:0.5+Math.random()*1.5,drift:Math.random()*0.5-0.25});
+function themeColor(bjbC,bugsC,trafficC,def){
+  if(bjbOn()) return bjbC;
+  if(bugsOn()) return bugsC;
+  if(trafficOn()) return trafficC;
+  return def;
+}
+
+function applyTitleTheme(){
+  if(bjbOn()){
+    titleScreen.style.background="linear-gradient(rgba(0,20,80,0.72),rgba(0,10,40,0.82)),url('https://cdn.imgchest.com/files/448ca75a4035.png') center/cover";
+  } else if(bugsOn()){
+    titleScreen.style.background="linear-gradient(rgba(5,20,5,0.80),rgba(5,20,5,0.85)),url('https://prontopest.net/wp-content/uploads/2014/12/Bed-Bug-e1419041061262.png') center bottom/200px auto no-repeat";
+  } else if(trafficOn()){
+    titleScreen.style.background="linear-gradient(rgba(20,0,0,0.65),rgba(0,0,0,0.75)),url('https://media.timeout.com/images/106140613/image.jpg') 20% center/cover no-repeat";
+  } else if(christmasOn()){
+    titleScreen.style.background="linear-gradient(rgba(0,50,15,0.88),rgba(80,0,0,0.88))";
+  } else {
+    titleScreen.style.background="linear-gradient(rgba(0,0,0,0.72),rgba(0,0,0,0.82)),url('https://cdn.audleytravel.com/270/355/79/368478-the-three-pagodas-dali.webp') center/cover no-repeat";
+  }
+}
+
+// ── Save / Load ───────────────────────────────────────────────────────────────
+function buildSaveCode(){
+  const data={
+    achievements, highScores, totalCoins, shopOwned, activeTheme,
+    selectedCharacter, totalPowerUpsCollected,
+    chestOwned, selectedTrail, totalLumberghPts
+  };
+  document.getElementById('saveCodeBox').value=btoa(JSON.stringify(data));
+  document.getElementById('saveMsg').textContent='';
+}
+function copySaveCode(){
+  navigator.clipboard.writeText(document.getElementById('saveCodeBox').value)
+    .then(()=>{ document.getElementById('saveMsg').textContent='✅ Copied!'; })
+    .catch(()=>{ document.getElementById('saveMsg').textContent='Select text above and copy manually.'; });
+}
+// ── Debug ─────────────────────────────────────────────────────────────────────
+let godMode=false;
+function debugUnlockAll(){
+  ['warrior','everything','world','greatThings','lumberghMaster','boltonFired','century','salUnlocked','savvyUnlocked','execStandard','ultimateGamer']
+    .forEach(k=>achievements[k]=true);
+  localStorage.setItem('flappyGeterAchievements',JSON.stringify(achievements));
+  ['bjb','supper','bugs','traffic','homer','cobson','king','christmas','nick','lion','chungus']
+    .forEach(k=>shopOwned[k]=true);
+  localStorage.setItem('flappyGeterShop',JSON.stringify(shopOwned));
+  // Unlock all chest characters
+  CHEST_CHARS.forEach(c=>{ chestOwned['char_'+c.chestKey]=true; });
+  // Unlock all chest trails
+  CHEST_TRAILS.forEach(t=>{ chestOwned['trail_'+t.id]=true; });
+  saveChestOwned();
+  coinCountEl.textContent=totalCoins;
+  document.getElementById('debugNote').textContent='✅ Everything unlocked!';
+}
+function debugMaxCoins(){
+  totalCoins=9999; saveCoins();
+  document.getElementById('debugNote').textContent='✅ 9999 coins granted!';
+}
+function debugMaxLP(){
+  totalLumberghPts=9999;
+  localStorage.setItem('flappyGeterLumberghPts',totalLumberghPts);
+  document.getElementById('debugNote').textContent='✅ 9999 LP granted!';
+}
+function debugResetAll(){
+  if(!confirm('Reset ALL progress? This cannot be undone.')) return;
+  ['flappyGeterAchievements','flappyGeterHighScores','flappyGeterCoins',
+   'flappyGeterShop','flappyGeterTheme','flappyGeterCharacter',
+   'flappyGeterChestOwned','flappyGeterTrail','flappyGeterLumberghPts'].forEach(k=>localStorage.removeItem(k));
+  location.reload();
+}
+function debugToggleModeNote(){
+  godMode=!godMode;
+  document.getElementById('debugNote').textContent=godMode?'⚡ God mode ON — no collision!':'⚡ God mode OFF';
+  // Show/hide god mode home button during gameplay
+  const btn=document.getElementById('godModeHomeBtn');
+  if(btn) btn.style.display=(godMode&&gameStarted)?'block':'none';
+}
+function endGameToHome(){
+  // Return to home menu from gameplay (god mode only)
+  stopAllMusic();
+  gameStarted=false; gameOver=false; dying=false;
+  extraLives=0; extraLifeGrace=0; gameOverTimer=0;
+  pipes=[]; circleEnemies=[]; fanObstacles=[]; specialPowerUps=[]; coins=[];
+  messages=[]; scorePops=[]; explodeParticles=[]; trailParticles=[];
+  score=0; birdY=200; velocity=-6; pipesPassed=0; scrollSpeedMult=1;
+  coinMultiplier=1; doubleCoinsTimer=0;
+  canvas.style.display='none';
+  titleScreen.style.display='flex';
+  applyTitleTheme();
+  document.getElementById('godModeHomeBtn').style.display='none';
+  const track=getMenuTrack(); track.currentTime=0; track.volume=volMusic; track.play().catch(()=>{});
+}
+function debugQueuePowerup(){
+  const sel=document.getElementById('debugPuSelect').value;
+  if(!sel){ document.getElementById('debugNote').textContent='⚠️ Select a powerup first!'; return; }
+  debugQueuedPowerup=sel;
+  const labels={'bonus':'+5 Points','life':'Extra Life','doublecoins':'2X Coins'};
+  document.getElementById('debugNote').textContent=`✅ "${labels[sel]}" will spawn at start of next run!`;
+}
+
+function loadSaveCode(){
+  const raw=document.getElementById('loadCodeInput').value.trim();
+  // Secret debug code
+  if(raw==='102556'){
+    hideOverlay('saveMenu');
+    showOverlay('debugMenu');
+    return;
+  }
+  const msg=document.getElementById('saveMsg');
+  let data;
+  try{
+    data=JSON.parse(atob(raw.replace(/\s+/g,'')));
+    if(!data||typeof data!=='object') throw new Error('bad');
+  } catch(e){
+    msg.textContent='❌ Invalid code.';
+    return;
+  }
+  // 1) Write EVERYTHING to localStorage first (before touching memory/DOM)
+  const w={
+    flappyGeterAchievements:JSON.stringify(data.achievements||achievements),
+    flappyGeterHighScores:JSON.stringify(Object.assign({normal:0,lumbergh:0},data.highScores||{})),
+    flappyGeterCoins:String(parseInt(data.totalCoins)||0),
+    flappyGeterPowerUps:String(parseInt(data.totalPowerUpsCollected)||0),
+    flappyGeterShop:JSON.stringify(Object.assign({},shopOwned,data.shopOwned||{})),
+    flappyGeterTheme:data.activeTheme||'none',
+    flappyGeterCharacter:String(parseInt(data.selectedCharacter)||0),
+    flappyGeterChestOwned:JSON.stringify(data.chestOwned||chestOwned||{}),
+    flappyGeterTrail:data.selectedTrail||selectedTrail||'cyan',
+    flappyGeterLumberghPts:String(parseInt(data.totalLumberghPts)||0)
+  };
+  let ok=true;
+  try{
+    for(const k in w) localStorage.setItem(k,w[k]);
+    for(const k in w) if(localStorage.getItem(k)!==w[k]) ok=false;
+  }catch(e){ ok=false; }
+  if(!ok){
+    msg.textContent='⚠️ Your browser blocked saving (private mode / blocked site data?). Progress loaded for this session only.';
+  }
+  // 2) Update in-memory state
+  try{
+    achievements=JSON.parse(w.flappyGeterAchievements);
+    highScores=JSON.parse(w.flappyGeterHighScores);
+    totalCoins=parseInt(w.flappyGeterCoins);
+    totalPowerUpsCollected=parseInt(w.flappyGeterPowerUps);
+    shopOwned=JSON.parse(w.flappyGeterShop);
+    activeTheme=w.flappyGeterTheme;
+    selectedCharacter=parseInt(w.flappyGeterCharacter);
+    chestOwned=JSON.parse(w.flappyGeterChestOwned);
+    selectedTrail=w.flappyGeterTrail;
+    totalLumberghPts=parseInt(w.flappyGeterLumberghPts);
+  }catch(e){}
+  // 3) Reload so the game re-initializes from storage; only if the save really stuck
+  if(ok){
+    msg.textContent='✅ Progress loaded! Reloading…';
+    setTimeout(()=>location.reload(),400);
+    return;
+  }
+  try{
+    normalHSEl.textContent=highScores.normal;
+    lumberghHSEl.textContent=highScores.lumbergh;
+    coinCountEl.textContent=totalCoins;
+    const lpEl=document.getElementById('lpCount'); if(lpEl) lpEl.textContent=totalLumberghPts;
+    applyTitleTheme();
+  }catch(e){}
+}
+
+// ── Overlay helpers ───────────────────────────────────────────────────────────
+function showOverlay(id){ document.getElementById(id).style.display='flex'; }
+function hideOverlay(id){ document.getElementById(id).style.display='none'; }
+
+// ── Achievements ──────────────────────────────────────────────────────────────
+function saveCoins(){
+  localStorage.setItem('flappyGeterCoins',totalCoins);
+  coinCountEl.textContent=totalCoins;
+}
+function saveLumberghPts(){
+  localStorage.setItem('flappyGeterLumberghPts',totalLumberghPts);
+  const el=document.getElementById('lumberghPtCount');
+  if(el) el.textContent=totalLumberghPts;
+}
+function updateHighScore(){
+  if(isLumberghMode){
+    if(score>highScores.lumbergh){ highScores.lumbergh=score; localStorage.setItem('flappyGeterHighScores',JSON.stringify(highScores)); lumberghHSEl.textContent=score; }
+  } else {
+    if(score>highScores.normal){ highScores.normal=score; localStorage.setItem('flappyGeterHighScores',JSON.stringify(highScores)); normalHSEl.textContent=score; }
+  }
+}
+let currentAchievementAlpha=0;
+function unlockAchievement(key,text){
+  if(!achievements[key]){
+    achievements[key]=true;
+    localStorage.setItem('flappyGeterAchievements',JSON.stringify(achievements));
+    currentAchievement=text;
+    currentAchievementAlpha=1.0;
+    // Play achievement SFX — start at 0.33s, stop at 3s
+    try{
+      achSFX.currentTime=0.33; achSFX.volume=Math.min(1,volSFX*0.55);
+      achSFX.play().catch(()=>{});
+      setTimeout(()=>{ try{achSFX.pause();achSFX.currentTime=0;}catch(e){} },2700);
+    }catch(e){}
+    // Fade out after 4s hold, over 2s
+    setTimeout(()=>{
+      const fade=setInterval(()=>{
+        currentAchievementAlpha=Math.max(0,currentAchievementAlpha-0.018);
+        if(currentAchievementAlpha<=0){ clearInterval(fade); currentAchievement=""; }
+      },33);
+    },4000);
+  }
+}
+function showAchievements(){
+  showOverlay('achievementsMenu');
+  document.getElementById('achList').innerHTML=`
+    <div class="ach-item">${achievements.warrior?'✅':'◻️'} KEKISTANI WARRIOR! (15pts)</div>
+    <div class="ach-item">${achievements.everything?'✅':'◻️'} you are everything to me. (30pts)</div>
+    <div class="ach-item">${achievements.world?'✅':'◻️'} the world is not enough for some. (50pts)</div>
+    <div class="ach-item">${achievements.greatThings?'✅':'◻️'} you have achieved great things. (60pts)</div>
+    <div class="ach-item">${achievements.lumberghMaster?'✅':'◻️'} mastered lumbergh mode (20+ Lumbergh)</div>
+    <div class="ach-item">${achievements.boltonFired?'✅':'◻️'} you're FIRED!! just kidding you're promoted. (69 Lumbergh 😏)</div>
+    <div class="ach-item">${achievements.century?'✅':'◻️'} you got a score of 100 on flappy geter. (100 Normal)</div>
+    <div class="ach-item">${achievements.salUnlocked?'✅':'◻️'} sal has appeared! (collect 14 powerups total — 🍔 or ♥)</div>
+    <div class="ach-item">${achievements.savvyUnlocked?'✅':'◻️'} savvy businessman #3 has entered the chat. (51 powerups)</div>
+    <div class="ach-item">${achievements.execStandard?'✅':'◻️'} WOOWWWW! YAYYY!! (score 120 in Lumbergh mode)</div>
+    <div class="ach-item">${achievements.ultimateGamer?'✅':'◻️'} ultimate gamer. (score 1000 in any mode)</div>
+  `;
+}
+
+// ── Character Select ──────────────────────────────────────────────────────────
+function isCharUnlocked(c){
+  if(c.unlock==='free') return true;
+  if(c.unlock==='achievement') return !!achievements[c.ach];
+  if(c.unlock==='shop') return !!shopOwned[c.shopKey];
+  if(c.unlock==='chest') return !!chestOwned['char_'+c.chestKey];
+  return false;
+}
+function buildCharGrid(){
+  const grid=document.getElementById('charGrid');
+  grid.innerHTML='';
+  const PER_ROW=5;
+  for(let r=0;r*PER_ROW<CHARS.length;r++){
+    const row=document.createElement('div');
+    row.className='char-row';
+    const slice=CHARS.slice(r*PER_ROW,(r+1)*PER_ROW);
+    slice.forEach((c,i)=>{
+      const idx=r*PER_ROW+i;
+      const unlocked=isCharUnlocked(c);
+      const div=document.createElement('div');
+      div.className='char-option'+(idx===selectedCharacter?' current':'');
+      div.style.opacity=unlocked?'1':'0.4';
+      div.onclick=()=>selectCharacter(idx);
+      const tip=document.createElement('div');
+      tip.className='char-tooltip';
+      tip.style.background=`linear-gradient(to bottom, ${c.clsColor}, #000)`;
+      tip.innerHTML=`<b>${c.name}</b><br><span style="font-size:10px;opacity:0.85;">${c.cls}</span>`;
+      const img=document.createElement('img');
+      img.src=c.src; img.alt=c.name;
+      div.appendChild(tip); div.appendChild(img);
+      row.appendChild(div);
+    });
+    grid.appendChild(row);
+  }
+}
+function showCharacterSelect(){ showOverlay('characterMenu'); buildCharGrid(); }
+function selectCharacter(idx){
+  if(!isCharUnlocked(CHARS[idx])){ playDeniedSFX(); return; }
+  sfx();
+  selectedCharacter=idx;
+  localStorage.setItem('flappyGeterCharacter',idx);
+  buildCharGrid();
+}
+
+// ── LUMBERGH CHESTS ───────────────────────────────────────────────────────────
+const CHEST_CHARS=CHARS.filter(c=>c.unlock==='chest');
+const CHEST_TRAILS=TRAILS.filter(t=>t.unlock==='chest');
+
+function chestRarityWeight(cls){
+  switch(cls){
+    case'Common': return 50;
+    case'Uncommon': return 25;
+    case'Rare': return 7;
+    case'Ultra Rare': return 3;
+    case'Ultra Mega Super Rare': return 1;
+    default: return 1;
+  }
+}
+function weightedPick(pool,weightFn){
+  const total=pool.reduce((s,x)=>s+weightFn(x),0);
+  let r=Math.random()*total;
+  for(const x of pool){ r-=weightFn(x); if(r<=0) return x; }
+  return pool[pool.length-1];
+}
+
+function showLumberghChests(){
+  showOverlay('lumberghChestsMenu');
+  document.getElementById('chestLPDisplay').textContent=totalLumberghPts;
+  document.getElementById('chestImg').src='https://cdn.imgchest.com/files/10ca44e379c2.png';
+  document.getElementById('chestOpenBtn').disabled=false;
+  document.getElementById('chestReveal').style.display='none';
+  document.getElementById('chestPossibles').style.display='none';
+}
+
+// Orb image for chest animation
+const orbImg=new Image(); orbImg.src='https://cdn.imgchest.com/files/4244dbe76251.png';
+// Preload chest frames
+const _chest1=new Image(); _chest1.src='https://cdn.imgchest.com/files/10ca44e379c2.png';
+const _chest2=new Image(); _chest2.src='https://cdn.imgchest.com/files/1f4111cad0dd.png';
+const _chest3=new Image(); _chest3.src='https://cdn.imgchest.com/files/abbeac24963e.png';
+
+function openChest(){
+  if(totalLumberghPts<5){ playDeniedSFX(); return; }
+  const btn=document.getElementById('chestOpenBtn');
+  btn.disabled=true;
+  totalLumberghPts-=5;
+  localStorage.setItem('flappyGeterLumberghPts',totalLumberghPts);
+  document.getElementById('chestLPDisplay').textContent=totalLumberghPts;
+  const lpEl=document.getElementById('lpCount'); if(lpEl) lpEl.textContent=totalLumberghPts;
+
+  const wonChar=weightedPick(CHEST_CHARS,c=>chestRarityWeight(c.cls));
+  const wonTrail=weightedPick(CHEST_TRAILS,c=>chestRarityWeight(c.cls));
+
+  const img=document.getElementById('chestImg');
+  const orbCanvas=document.getElementById('chestOrbCanvas');
+  const orbCtx=orbCanvas.getContext('2d');
+
+  // Chest animation: 1 → 2 (hold) → 3
+  img.src='https://cdn.imgchest.com/files/10ca44e379c2.png';
+  try{ chestDrumSFX.currentTime=0; chestDrumSFX.volume=Math.min(1,volSFX*1.0); chestDrumSFX.play().catch(()=>{}); }catch(e){}
+  setTimeout(()=>{ img.src='https://cdn.imgchest.com/files/1f4111cad0dd.png'; },150);
+  setTimeout(()=>{ img.src='https://cdn.imgchest.com/files/abbeac24963e.png'; },350);
+
+  // Orb fly-out animation after chest opens
+  setTimeout(()=>{
+    // Two orbs start at center of chest (100,130) and fly out
+    const orbs=[
+      {x:100, y:130, tx:45,  ty:30,  scale:0, alpha:0}, // left orb
+      {x:100, y:130, tx:155, ty:30,  scale:0, alpha:0}, // right orb
+    ];
+    let frame=0;
+    const FRAMES=45;
+    function animOrbs(){
+      orbCtx.clearRect(0,0,200,200);
+      frame++;
+      const t=Math.min(1,frame/FRAMES);
+      const ease=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2; // ease in-out
+      orbs.forEach(o=>{
+        o.x=100+(o.tx-100)*ease;
+        o.y=130+(o.ty-130)*ease;
+        o.scale=ease*1.2*(1-Math.max(0,(t-0.7)/0.3)*0.5); // grow then slightly shrink
+        o.alpha=Math.min(1,t*3);
+        if(orbImg.complete&&o.alpha>0&&o.scale>0){
+          orbCtx.save();
+          orbCtx.globalAlpha=o.alpha;
+          orbCtx.shadowColor='#ffffff'; orbCtx.shadowBlur=20*o.scale;
+          const sz=60*o.scale;
+          orbCtx.drawImage(orbImg,o.x-sz/2,o.y-sz/2,sz,sz);
+          orbCtx.restore();
+        }
+      });
+      if(frame<FRAMES+15) requestAnimationFrame(animOrbs);
+      else {
+        // Fade canvas out, show reveal
+        orbCtx.clearRect(0,0,200,200);
+        try{ chestDrumSFX.pause(); chestDrumSFX.currentTime=0; }catch(e){}
+        showChestReveal(wonChar,wonTrail);
+      }
+    }
+    requestAnimationFrame(animOrbs);
+  }, 400); // start orb anim shortly after chest opens
+}
+
+function showChestReveal(wonChar,wonTrail){
+  const charKey='char_'+wonChar.chestKey;
+  const trailKey='trail_'+wonTrail.id;
+  const charIsNew=!chestOwned[charKey];
+  const trailIsNew=!chestOwned[trailKey];
+  if(charIsNew){ chestOwned[charKey]=true; saveChestOwned(); }
+  if(trailIsNew){ chestOwned[trailKey]=true; saveChestOwned(); }
+
+  const clsColors={Common:'#f97316',Uncommon:'#66ff88',Rare:'#c084fc','Ultra Rare':'#f87171','Ultra Mega Super Rare':'#ffd700'};
+  document.getElementById('revealCharImg').src=wonChar.src;
+  document.getElementById('revealCharName').textContent=wonChar.name;
+  document.getElementById('revealCharCls').innerHTML=`<span style="color:${clsColors[wonChar.cls]||'#aaa'}">${wonChar.cls}</span>`;
+  document.getElementById('revealCharNew').textContent=charIsNew?'✨ NEW!':'';
+  document.getElementById('revealCharDesc').textContent=CHEST_CHAR_DESCS[wonChar.chestKey]||'';
+
+  const rtc=document.getElementById('revealTrailCanvas').getContext('2d');
+  rtc.clearRect(0,0,72,72); rtc.fillStyle='#111'; rtc.fillRect(0,0,72,72);
+  drawTrailPreview(rtc,wonTrail,72,36);
+  document.getElementById('revealTrailName').textContent=wonTrail.name;
+  document.getElementById('revealTrailCls').innerHTML=`<span style="color:${clsColors[wonTrail.cls]||'#aaa'}">${wonTrail.cls}</span>`;
+  document.getElementById('revealTrailNew').textContent=trailIsNew?'✨ NEW!':'';
+
+  document.getElementById('chestReveal').style.display='flex';
+  try{ chestDingSFX.currentTime=0; chestDingSFX.volume=Math.min(1,volSFX*1.5); chestDingSFX.play().catch(()=>{}); }catch(e){}
+}
+
+function closeChestReveal(){
+  document.getElementById('chestReveal').style.display='none';
+  document.getElementById('chestImg').src='https://cdn.imgchest.com/files/10ca44e379c2.png';
+  document.getElementById('chestOpenBtn').disabled=false;
+}
+
+function showChestPossibles(){
+  sfx();
+  const panel=document.getElementById('chestPossibles');
+  const list=document.getElementById('chestPossiblesList');
+  const clsOrder=['Common','Uncommon','Rare','Ultra Rare','Ultra Mega Super Rare'];
+  const clsColors={Common:'#f97316',Uncommon:'#66ff88',Rare:'#c084fc','Ultra Rare':'#f87171','Ultra Mega Super Rare':'#ffd700'};
+
+  let currentTab='chars';
+  function renderTab(){
+    if(currentTab==='chars'){
+      let html='';
+      clsOrder.forEach(cls=>{
+        const chars=CHEST_CHARS.filter(c=>c.cls===cls);
+        if(!chars.length) return;
+        html+=`<div style="font-size:10px;color:${clsColors[cls]};font-weight:bold;margin:5px 0 2px;">${cls}</div>`;
+        html+=chars.map(c=>{
+          const owned=!!chestOwned['char_'+c.chestKey];
+          const nameDisplay=c.name.length>20?c.name.replace(/\s/g,'<br>'):c.name;
+          return `<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;opacity:${owned?1:0.5};">
+            <img src="${c.src}" style="width:36px;height:36px;border-radius:50%;border:2px solid ${clsColors[cls]};object-fit:cover;flex-shrink:0;margin-top:2px;">
+            <div><div style="font-size:11px;color:#fff;">${nameDisplay}${owned?' ✅':''}</div><div style="font-size:9px;color:#aaa;">${CHEST_CHAR_DESCS[c.chestKey]||''}</div></div>
+          </div>`;
+        }).join('');
+      });
+      list.innerHTML=html;
+    } else {
+      let html='';
+      ['Common','Uncommon','Rare'].forEach(cls=>{
+        const trails=CHEST_TRAILS.filter(t=>t.cls===cls);
+        if(!trails.length) return;
+        html+=`<div style="font-size:10px;color:${clsColors[cls]};font-weight:bold;margin:5px 0 2px;">${cls}</div>`;
+        trails.forEach(t=>{
+          const owned=!!chestOwned['trail_'+t.id];
+          const ic=document.createElement('canvas'); ic.width=36; ic.height=36;
+          const ictx=ic.getContext('2d'); ictx.fillStyle='#111'; ictx.fillRect(0,0,36,36);
+          drawTrailPreview(ictx,t,36,18);
+          html+=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;opacity:${owned?1:0.5};">
+            <img src="${ic.toDataURL()}" style="width:36px;height:36px;border-radius:50%;border:2px solid ${clsColors[cls]};">
+            <div style="font-size:11px;color:#fff;">${t.name}${owned?' ✅':''}</div>
+          </div>`;
+        });
+      });
+      list.innerHTML=html;
+    }
+  }
+
+  // Build tabs HTML
+  panel.style.display='block';
+  // Rebuild panel content with tabs
+  panel.innerHTML=`
+    <h3 style="color:#ffd700;margin:0 0 8px;font-size:18px;">🔍 Possible Unlocks</h3>
+    <div style="display:flex;gap:0;margin-bottom:10px;border-radius:8px;overflow:hidden;border:2px solid #ffd700;flex-shrink:0;">
+      <button id="possTabChars" style="flex:1;padding:5px 0;font-size:13px;font-weight:bold;border:none;cursor:pointer;background:#ffd700;color:#000;" onclick="possiblesTab('chars')">👤 Characters</button>
+      <button id="possTabTrails" style="flex:1;padding:5px 0;font-size:13px;font-weight:bold;border:none;cursor:pointer;background:#1a2a3a;color:#ffd700;" onclick="possiblesTab('trails')">✨ Trails</button>
+    </div>
+    <div id="chestPossiblesList" style="width:100%;flex:1;overflow-y:auto;"></div>
+    <button onclick="sfx();document.getElementById('chestPossibles').style.display='none';rebuildChestPossibles();" class="btn btnRed" style="margin-top:8px;font-size:13px;flex-shrink:0;">← Back</button>
+  `;
+  // Store tab state and render function on window for the onclick
+  window._possiblesTab='chars';
+  window._renderPossiblesTab=function(){
+    const listEl=document.getElementById('chestPossiblesList');
+    const clsOrder2=['Common','Uncommon','Rare','Ultra Rare','Ultra Mega Super Rare'];
+    if(window._possiblesTab==='chars'){
+      let html='';
+      clsOrder2.forEach(cls=>{
+        const chars=CHEST_CHARS.filter(c=>c.cls===cls);
+        if(!chars.length) return;
+        html+=`<div style="font-size:10px;color:${clsColors[cls]};font-weight:bold;margin:5px 0 2px;">${cls}</div>`;
+        html+=chars.map(c=>{
+          const owned=!!chestOwned['char_'+c.chestKey];
+          return `<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;opacity:${owned?1:0.5};">
+            <img src="${c.src}" style="width:36px;height:36px;border-radius:50%;border:2px solid ${clsColors[cls]};object-fit:cover;flex-shrink:0;margin-top:2px;">
+            <div><div style="font-size:11px;color:#fff;word-break:break-word;max-width:220px;">${c.name}${owned?' ✅':''}</div><div style="font-size:9px;color:#aaa;">${CHEST_CHAR_DESCS[c.chestKey]||''}</div></div>
+          </div>`;
+        }).join('');
+      });
+      listEl.innerHTML=html;
+    } else {
+      let html='';
+      ['Common','Uncommon','Rare'].forEach(cls=>{
+        const trails=CHEST_TRAILS.filter(t=>t.cls===cls);
+        if(!trails.length) return;
+        html+=`<div style="font-size:10px;color:${clsColors[cls]};font-weight:bold;margin:5px 0 2px;">${cls}</div>`;
+        trails.forEach(t=>{
+          const owned=!!chestOwned['trail_'+t.id];
+          const ic=document.createElement('canvas'); ic.width=36; ic.height=36;
+          const ictx=ic.getContext('2d'); ictx.fillStyle='#111'; ictx.fillRect(0,0,36,36);
+          drawTrailPreview(ictx,t,36,18);
+          html+=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;opacity:${owned?1:0.5};">
+            <img src="${ic.toDataURL()}" style="width:36px;height:36px;border-radius:50%;border:2px solid ${clsColors[cls]};">
+            <div style="font-size:11px;color:#fff;">${t.name}${owned?' ✅':''}</div>
+          </div>`;
+        });
+      });
+      listEl.innerHTML=html;
+    }
+  };
+  window._renderPossiblesTab();
+}
+window.possiblesTab=function(tab){
+  window._possiblesTab=tab;
+  const c=document.getElementById('possTabChars');
+  const t=document.getElementById('possTabTrails');
+  if(c){ c.style.background=tab==='chars'?'#ffd700':'#1a2a3a'; c.style.color=tab==='chars'?'#000':'#ffd700'; }
+  if(t){ t.style.background=tab==='trails'?'#ffd700':'#1a2a3a'; t.style.color=tab==='trails'?'#000':'#ffd700'; }
+  window._renderPossiblesTab&&window._renderPossiblesTab();
+};
+function rebuildChestPossibles(){
+  // Restore original panel structure after tabs were innerHTML'd
+  const panel=document.getElementById('chestPossibles');
+  panel.innerHTML=`
+    <h3 style="color:#ffd700;margin:0 0 8px;font-size:18px;">🔍 Possible Unlocks</h3>
+    <div id="chestPossiblesList" style="width:100%;"></div>
+    <button onclick="sfx();document.getElementById('chestPossibles').style.display='none'" class="btn btnRed" style="margin-top:10px;font-size:14px;">← Back</button>
+  `;
+}
+
+function drawSplat(pctx, x, y, sz, color){
+  pctx.fillStyle=color;
+  pctx.beginPath();
+  // Central blob
+  pctx.arc(x, y, sz*0.6, 0, Math.PI*2);
+  pctx.fill();
+  // Irregular spikes/drips around the blob
+  const spikes=7;
+  for(let s=0;s<spikes;s++){
+    const angle=(s/spikes)*Math.PI*2 + (s%2)*0.3;
+    const dist=sz*(0.7+Math.sin(s*2.3)*0.3);
+    const sx=x+Math.cos(angle)*dist;
+    const sy=y+Math.sin(angle)*dist;
+    pctx.beginPath();
+    pctx.arc(sx, sy, sz*(0.15+Math.cos(s*1.7)*0.08), 0, Math.PI*2);
+    pctx.fill();
+    // Connect drip to center
+    pctx.beginPath();
+    pctx.ellipse((x+sx)/2,(y+sy)/2, sz*0.12, dist*0.35, angle, 0, Math.PI*2);
+    pctx.fill();
+  }
+}
+
+function drawTrailPreview(pctx,td,w,cy){
+  for(let i=0;i<10;i++){
+    const frac=i/10;
+    const x=w-4-frac*(w-8);
+    const y=cy+Math.sin(frac*Math.PI*1.5)*6;
+    const alpha=(1-frac)*0.85;
+    const sz=Math.max(0.5,4-frac*2.5);
+    pctx.globalAlpha=alpha;
+    let color;
+    if(td.draw==='rainbow') color=`hsl(${frac*360},100%,65%)`;
+    else if(td.draw==='seqCircle'||td.draw==='seqSquare') color=td.seqColors[Math.floor(i/2)%td.seqColors.length];
+    else if(td.draw==='altCircle') color=td.colors[Math.floor(i/2)%td.colors.length];
+    else if(td.multiColors) color=td.multiColors[i%td.multiColors.length];
+    else if(td.colors) color=td.colors[i%td.colors.length];
+    else { const h=i%2===0?(td.hue||0):(td.hue2!==undefined?td.hue2:td.hue||0); const s=i%2===0?(td.sat||100):(td.sat2!==undefined?td.sat2:td.sat||100); const l=i%2===0?(td.lit||65):(td.lit2!==undefined?td.lit2:td.lit||65); color=`hsl(${h},${s}%,${l}%)`; }
+    pctx.fillStyle=color;
+    pctx.beginPath();
+    if(td.draw==='splat'){ drawSplat(pctx,x,y,sz*1.8,color); }
+    else if(td.draw==='square'||td.draw==='seqSquare'){ pctx.fillRect(x-sz,y-sz,sz*2,sz*2); }
+    else if(td.draw==='triangle'){ pctx.moveTo(x,y-sz);pctx.lineTo(x+sz,y+sz);pctx.lineTo(x-sz,y+sz);pctx.closePath();pctx.fill(); }
+    else if(td.draw==='star'){
+      for(let s=0;s<5;s++){
+        const a=(s*4*Math.PI/5)-Math.PI/2, a2=((s*4+2)*Math.PI/5)-Math.PI/2;
+        if(s===0) pctx.moveTo(x+Math.cos(a)*sz,y+Math.sin(a)*sz);
+        else pctx.lineTo(x+Math.cos(a)*sz,y+Math.sin(a)*sz);
+        pctx.lineTo(x+Math.cos(a2)*sz*0.4,y+Math.sin(a2)*sz*0.4);
+      }
+      pctx.closePath();pctx.fill();
+    } else { pctx.arc(x,y,sz,0,Math.PI*2);pctx.fill(); }
+  }
+  pctx.globalAlpha=1;
+}
+
+function buildTrailGrid(){
+  const grid=document.getElementById('trailGrid');
+  grid.innerHTML='';
+  const PER_ROW=4;
+  for(let r=0;r*PER_ROW<TRAILS.length;r++){
+    const row=document.createElement('div');
+    row.className='char-row';
+    TRAILS.slice(r*PER_ROW,(r+1)*PER_ROW).forEach(t=>{
+      const unlocked=isTrailUnlocked(t);
+      const selected=selectedTrail===t.id;
+      const div=document.createElement('div');
+      div.className='char-option'+(selected?' current':'');
+      div.style.opacity=unlocked?'1':'0.4';
+      div.onclick=()=>selectTrail(t.id);
+      const tip=document.createElement('div');
+      tip.className='char-tooltip';
+      const tipColor=t.multiColors?t.multiColors[0]:t.colors?t.colors[0]:`hsl(${t.hue||0},${t.sat||100}%,${Math.min(t.lit||65,50)}%)`;
+      tip.style.background=`linear-gradient(to bottom, ${tipColor}, #000)`;
+      tip.innerHTML=`<b>${t.name}</b><br><span style="font-size:10px;opacity:0.85;">${t.cls}</span>`;
+      const ic=document.createElement('canvas');
+      ic.width=58; ic.height=58;
+      const cx=ic.getContext('2d');
+      cx.fillStyle='#1a1a2e'; cx.fillRect(0,0,58,58);
+      drawTrailPreview(cx,t,58,29);
+      div.appendChild(tip); div.appendChild(ic);
+      row.appendChild(div);
+    });
+    grid.appendChild(row);
+  }
+}
+function showTrailSelect(){ showOverlay('trailMenu'); buildTrailGrid(); }
+function selectTrail(id){
+  const t=TRAILS.find(tr=>tr.id===id);
+  if(!t||!isTrailUnlocked(t)){ playDeniedSFX(); return; }
+  sfx();
+  selectedTrail=id;
+  localStorage.setItem('flappyGeterTrail',id);
+  buildTrailGrid();
+}
+
+// ── Shop ──────────────────────────────────────────────────────────────────────
+const SHOP_ITEMS=[
+  {id:'bjb',      type:'theme', name:'🔵 Big Blue John Theme',    desc:'Blue pillars, blue world, BJB background on home.',            cost:25},
+  {id:'bugs',     type:'theme', name:'🐛 Bugs Theme',             desc:'Mossy logs, firefly particles, creepy crawly home screen.',     cost:40},
+  {id:'traffic',  type:'theme', name:'🚦 Traffic Light Party',    desc:'Everything goes red, green & yellow. Traffic light on home.',   cost:35},
+  {id:'christmas',type:'theme', name:'🎄 Christmas Theme',        desc:'Snow falls, lights twinkle, Perry Como plays White Christmas.', cost:35},
+  {id:'supper',   type:'char',  name:'🍽️ Supper',                desc:'a man eats supper.',                                          cost:30, charIdx:7},
+  {id:'homer',    type:'char',  name:'🐸 Homer Pepe',             desc:"wait a mintue, i'm a pepe!",                                  cost:73, charIdx:9},
+  {id:'cobson',   type:'char',  name:'🙂 Cobson',                 desc:'cobson lol',                                                  cost:25, charIdx:10},
+  {id:'king',     type:'char',  name:'👑 The Kindly King',        desc:'he is wise, and fair to his subjects.',                       cost:100,charIdx:11},
+  {id:'nick',     type:'char',  name:'🧑 Nick',                   desc:"it's nick!",                                                  cost:45, charIdx:14},
+  {id:'lion',     type:'char',  name:'🦁 The Smart Lion',          desc:'red means stop, green means go, yellow means take it slow.',   cost:50,  charIdx:16},
+  {id:'chungus',  type:'char',  name:'👾 Glitch Chungus Triplets',  desc:'standing at only 900 nanometers tall, the glitch chungus triplets can stand on a speck of dust. But despite their small size, they beam with personality.', cost:333, charIdx:17},
+];
+let shopTab='chars';
+function switchShopTab(tab){
+  shopTab=tab;
+  const tc=document.getElementById('tabChars');
+  const tt=document.getElementById('tabThemes');
+  if(tc) tc.className='shop-tab '+(tab==='chars'?'active':'inactive');
+  if(tt) tt.className='shop-tab '+(tab==='themes'?'active':'inactive');
+  refreshShopUI();
+}
+function refreshShopUI(){
+  const cont=document.getElementById('shopItems');
+  cont.innerHTML='';
+  const items=SHOP_ITEMS.filter(i=>shopTab==='chars'?i.type==='char':i.type==='theme');
+  items.forEach(item=>{
+    const owned=shopOwned[item.id];
+    const div=document.createElement('div');
+    div.className='shop-item';
+    div.style.display='flex'; div.style.alignItems='center'; div.style.gap='10px'; div.style.textAlign='left';
+    const btnTxt=owned?'Owned ✓':(totalCoins>=item.cost?`Buy (${item.cost} 🪙)`:'Not enough 🪙');
+    const btnCls=owned?'btn-locked':(totalCoins>=item.cost?'btn-buy':'btn-locked');
+    // For char items, show a small image
+    let imgHtml='';
+    if(item.type==='char'&&item.charIdx!==undefined){
+      const c=CHARS[item.charIdx];
+      if(c) imgHtml=`<img src="${c.src}" style="width:46px;height:46px;border-radius:50%;border:2px solid #ffd700;flex-shrink:0;" alt="${c.name}">`;
+    }
+    div.innerHTML=`${imgHtml}<div style="flex:1;min-width:0;"><h3 style="margin:0 0 2px;font-size:15px;">${item.name}</h3><p style="margin:0 0 4px;">${item.desc}</p><p style="margin:0;color:${owned?'#88ff88':'#ccc'};">${owned?'✅ Owned':`Cost: ${item.cost} 🪙`}</p><button class="${btnCls}" style="margin-top:5px;padding:5px 12px;font-size:12px;border:none;border-radius:7px;cursor:pointer;font-weight:bold;" onclick="buyItem('${item.id}')">${btnTxt}</button></div>`;
+    cont.appendChild(div);
+  });
+}
+function buyItem(id){
+  if(shopOwned[id]) return;
+  const item=SHOP_ITEMS.find(i=>i.id===id);
+  if(!item) return;
+  if(totalCoins<item.cost){ playDeniedSFX(); return; }
+  totalCoins-=item.cost; saveCoins();
+  shopOwned[id]=true;
+  localStorage.setItem('flappyGeterShop',JSON.stringify(shopOwned));
+  playPurchaseSFX();
+  refreshShopUI();
+}
+
+function renderThemeList(){
+  const themes=[
+    {id:'none',     name:'🏔️ Default',            desc:'Classic Guilin aesthetic.',                      owned:true},
+    {id:'bjb',      name:'🔵 Big Blue John',        desc:'Blue world + BJB background.',                  owned:shopOwned.bjb},
+    {id:'bugs',     name:'🐛 Bugs',                 desc:'Full swamp mode.',                              owned:shopOwned.bugs},
+    {id:'traffic',  name:'🚦 Traffic Light Party',  desc:'Red, green & yellow everything.',               owned:shopOwned.traffic},
+    {id:'christmas',name:'🎄 Christmas',            desc:'Snow, lights, Perry Como.',                     owned:shopOwned.christmas},
+  ];
+  document.getElementById('themeList').innerHTML=themes.map(t=>`
+    <div class="shop-item" style="display:flex;align-items:center;gap:8px;">
+      <div style="text-align:left;flex:1;"><h3 style="margin:0 0 2px;">${t.name}</h3><p style="margin:0;">${t.desc}</p>${!t.owned?`<p style="color:#f90;margin:1px 0;font-size:11px;">🔒 Buy in Shop</p>`:''}</div>
+      <button onclick="setTheme('${t.id}')" style="padding:6px 10px;font-size:12px;border:none;border-radius:7px;cursor:pointer;font-weight:bold;background:${activeTheme===t.id?'#00e676':'#ffd700'};color:#000;">${activeTheme===t.id?'✅ Active':'Select'}</button>
+    </div>`).join('');
+}
+function setTheme(id){
+  if(id!=='none'&&!shopOwned[id]){ playDeniedSFX(); return; }
+  sfx();
+  activeTheme=id;
+  localStorage.setItem('flappyGeterTheme',id);
+  applyTitleTheme();
+  renderThemeList();
+  // Switch music if on home screen
+  if(!gameStarted&&splashDismissed){
+    pauseAllMusic();
+    const track=getMenuTrack();
+    track.currentTime=0;
+    track.volume=volMusic; track.play().catch(()=>{});
+  }
+}
+
+function stopGameplayMusic(){
+  [bgMusic,lumberghMusic,mpMusic].forEach(a=>{ try{a.pause();a.currentTime=0;}catch(e){} });
+}
+function pauseAllMusic(){
+  // Pause everything without resetting position (for switching between tracks)
+  [menuMusic,bugsMenuMusic,bjbMenuMusicNew,trafficMenuMusic,bjbMenuMusic,bgMusic,lumberghMusic,christmasMusic,mpMusic].forEach(a=>{ try{a.pause();}catch(e){} });
+}
+function stopAllMusic(){
+  // Pause and reset position (for hard stops like game start)
+  [menuMusic,bugsMenuMusic,bjbMenuMusicNew,trafficMenuMusic,bjbMenuMusic,bgMusic,lumberghMusic,christmasMusic,mpMusic].forEach(a=>{ try{a.pause();a.currentTime=0;}catch(e){} });
+}
+// ── Game start / flap ─────────────────────────────────────────────────────────
+function startGame(lumbergh=false){
+  isLumberghMode=lumbergh;
+  titleScreen.style.display='none';
+  canvas.style.display='block'; // show canvas for gameplay
+  const godBtn=document.getElementById('godModeHomeBtn');
+  if(godBtn) godBtn.style.display=godMode?'block':'none';
+  gameStarted=true; gameOver=false;
+  score=0; birdY=200; velocity=-6; extraLives=0; extraLifeGrace=0; gameOverTimer=0; dying=false;
+  pipes=[]; circleEnemies=[]; fanObstacles=[]; specialPowerUps=[]; coins=[];
+  messages=[]; scorePops=[]; trailParticles=[]; trailColorCounter=0;
+  pipesPassed=0; scrollSpeedMult=1; coinMultiplier=1; doubleCoinsTimer=0;
+  // Inject any debug-queued powerup
+  if(debugQueuedPowerup){
+    specialPowerUps.push({x:300,baseY:300,y:300,type:debugQueuedPowerup});
+    debugQueuedPowerup=null;
+  }
+  particles.forEach(p=>p.y=Math.random()*720);
+  startTime=Date.now(); showStartHint=true;
+  // Load theme-appropriate backgrounds - set both to first image to avoid blank flash
+  bgUrls=getBgUrls(); bgIndex=0; fade=1;
+  prevBg.src=bgUrls[0]; currentBg.src=bgUrls[0];
+  stopAllMusic();
+  if(isLumberghMode){
+    lumberghMusic.volume=volMusic; lumberghMusic.currentTime=91; lumberghMusic.play().catch(()=>{});
+  } else {
+    bgMusic.volume=volMusic; bgMusic.currentTime=5; bgMusic.play().catch(()=>{});
+  }
+}
+function flap(){
+  if(mpActive||document.getElementById('mpContainer').style.display==='flex') return; // don't interfere with MP
+  if(!gameStarted){ startGame(); return; }
+  if(gameOver){
+    // Stop gameplay music synchronously
+    [bgMusic,lumberghMusic].forEach(a=>{ try{a.pause();a.currentTime=0;}catch(e){} });
+    // Return to home menu in-place
+    gameStarted=false; gameOver=false; dying=false;
+    extraLives=0; extraLifeGrace=0; gameOverTimer=0;
+    pipes=[]; circleEnemies=[]; fanObstacles=[]; specialPowerUps=[]; coins=[];
+    messages=[]; scorePops=[]; explodeParticles=[]; trailParticles=[];
+    score=0; birdY=200; velocity=-6; pipesPassed=0; scrollSpeedMult=1;
+    coinMultiplier=1; doubleCoinsTimer=0;
+    canvas.style.display='none'; // hide during home screen so it doesn't bleed through title
+    titleScreen.style.display='flex';
+    applyTitleTheme();
+    // Play menu music synchronously here — we are still inside the click event handler
+    const track=getMenuTrack();
+    track.currentTime=0;
+    track.volume=volMusic;
+    track.play().catch(e=>console.warn('menu music failed:',e));
+    return;
+  }
+  velocity=-13.8; flapGlow=1.0; showStartHint=false;
+}
+canvas.addEventListener('click',flap);
+// Mobile touch support — touchend fires flap without delay
+if(isMobile){
+  canvas.addEventListener('touchend', e=>{ e.preventDefault(); flap(); }, {passive:false});
+}
+document.addEventListener('keydown',e=>{ if(mpActive) return; if(e.key===" ") flap(); });
+
+// ── Spawning ──────────────────────────────────────────────────────────────────
+function spawnPipe(isInitial=false){
+  // Guard: don't spawn if any pipe is too close to spawn point
+  if(!isInitial && pipes.some(p=>p.x>380)) return;
+  const gap=265,offset=Math.random()*100-50;
+  let top=360+offset-gap/2;
+  top=Math.max(100,Math.min(top,720-gap-150));
+  const x=isInitial?520+pipes.length*400:520;
+  const isEnemy=!isInitial&&Math.random()<0.075;
+  const isFastEnemy=!isInitial&&!isEnemy&&Math.random()<0.025;
+  const isCircleEnemy=!isInitial&&!isEnemy&&!isFastEnemy&&Math.random()<0.02;
+  pipes.push({x,top,gap,passed:false,isEnemy,isFastEnemy,isCircleEnemy,
+    enemyPhase:Math.random()*Math.PI*2,_ex:undefined,_ey:undefined,_size:undefined});
+  if(!isInitial&&!isEnemy&&!isFastEnemy&&!isCircleEnemy){
+    const r=Math.random();
+    const lastWasLife = specialPowerUps.length>0 && specialPowerUps[specialPowerUps.length-1].type==='life';
+    if(r<0.07) specialPowerUps.push({x:520,baseY:top+gap/2,y:top+gap/2,type:'bonus'});
+    else if(r<0.10&&!lastWasLife) specialPowerUps.push({x:520,baseY:top+gap/2,y:top+gap/2,type:'life'});
+    else if(r<0.13) specialPowerUps.push({x:520,baseY:top+gap/2,y:top+gap/2,type:'doublecoins'});
+
+    // ~20% chance to spawn a fan midway between this pipe and the previous regular pipe.
+    // We use a fixed offset of half the pipe interval so it always spawns off-screen.
+    if(!isInitial&&fanObstacles.length===0&&Math.random()<0.40){
+      const reg=pipes.filter(p=>!p.isEnemy&&!p.isFastEnemy&&!p.isCircleEnemy);
+      if(reg.length>=2){
+        const prevPipe=reg[reg.length-2];
+        // Pipe interval is how far apart the two pipes were at spawn time.
+        // Both were spawned at x=520, so the interval = 520 - prevPipe.x at spawn.
+        // But prevPipe has scrolled since — use the *current* distance between them
+        // to find the midpoint, then add 520 to shift it off-screen right.
+        // Simpler: fan x = 520 + half the original spawn interval.
+        // Original interval ≈ speed * spawnInterval_ms / 1000 * 60fps... 
+        // Actually just use prevPipe's *original* spawn x, which was always 520.
+        // So midpoint at spawn time = (520 + 520) / 2 = 520. That's wrong too.
+        // 
+        // Correct approach: the previous pipe spawned at x=520 some time ago and
+        // has since scrolled to prevPipe.x. The new pipe is at x=520 right now.
+        // The distance between them right now = 520 - prevPipe.x.
+        // Half of that = (520 - prevPipe.x) / 2.
+        // Fan x off-screen = 520 - (520 - prevPipe.x)/2 = (520 + prevPipe.x)/2.
+        // But that's still on-screen if prevPipe is at e.g. x=200.
+        // 
+        // THE FIX: spawn fan at x=520 + half_interval, where half_interval is
+        // the distance the previous pipe has scrolled = 520 - prevPipe.x, halved.
+        // Fan x = 520 + (520 - prevPipe.x) / 2  — always to the RIGHT of x=520.
+        const halfInterval=(520-prevPipe.x)/2;
+        const fanX=520+halfInterval; // guaranteed off-screen right
+        const prevCy=prevPipe.top+prevPipe.gap/2;
+        const newCy=top+gap/2;
+        const fy=(prevCy+newCy)/2+(Math.random()-0.5)*20;
+        const r2=52+Math.random()*10;
+        const spinDir=Math.random()<0.5?1:-1;
+        fanObstacles.push({
+          x:fanX, y:fy, r:r2,
+          angle:Math.random()*Math.PI*2,
+          spinSpeed:spinDir*(0.017+Math.random()*0.008)*(isLumberghMode?1.6:1),
+          passed:false
+        });
+      }
+    }
+  }
+}
+function spawnCoin(){
+  if(!gameStarted||gameOver) return;
+  // Find the rightmost regular pipe — spawn coin in its gap
+  const nearPipes=pipes.filter(p=>p.x>300&&p.x<560&&!p.isEnemy&&!p.isFastEnemy&&!p.isCircleEnemy);
+  let cy;
+  if(nearPipes.length>0){
+    // Pick the rightmost pipe's gap center with a small random offset
+    const p=nearPipes[nearPipes.length-1];
+    const gapMargin=40; // stay away from pillar edges
+    cy=p.top+gapMargin+Math.random()*(p.gap-gapMargin*2);
+    cy=Math.max(p.top+gapMargin, Math.min(p.top+p.gap-gapMargin, cy));
+  } else {
+    cy=150+Math.random()*400; // no pipe nearby, spawn freely
+  }
+  const r=Math.random();
+  const isLP=r<0.025;        // 2.5/100 lumbergh point (was 1/100)
+  const is5=!isLP&&r<0.06;   // ~5/100 5-coin (but not if lumbergh pt)
+  coins.push({x:520,baseY:cy,y:cy,is5,isLP});
+}
+// Pipe spawning now handled in game loop based on distance, not time interval
+// (time interval creates gaps at high speeds; distance-based stays consistent)
+setInterval(()=>{ if(gameStarted&&!gameOver) spawnCoin(); },3800+Math.random()*3500);
+setInterval(()=>{
+  if(gameStarted&&!gameOver){
+    bgUrls=getBgUrls();
+    prevBg.src=currentBg.src; // old becomes prev
+    bgIndex=(bgIndex+1)%bgUrls.length;
+    currentBg.src=bgUrls[bgIndex]; // load new
+    fade=0; // start fade in
+  }
+},14000);
+setInterval(()=>{ if(gameStarted&&!gameOver){ const txt=encouragements[Math.floor(Math.random()*encouragements.length)]; messages.push({text:txt,x:440,y:80+Math.random()*560,speed:0.4+Math.random()*0.4}); } },6000+Math.random()*6000);
+
+// ── Draw helpers ──────────────────────────────────────────────────────────────
+function tc(b,g,t,xmas,d){ return bjbOn()?b:bugsOn()?g:trafficOn()?t:christmasOn()?xmas:d; }
+let _ctx=ctx; // active drawing context — swap to mpCtx when drawing for multiplayer
+function drawPillar(x,y,w,h){
+  if(h<=0) return;
+  if(trafficOn()){
+    const colors=['#cc0000','#ffd700','#007700'];
+    const bandH=20;
+    _ctx.save();
+    _ctx.beginPath(); _ctx.rect(x,y,w,h); _ctx.clip();
+    for(let by=y;by<y+h;by+=bandH){
+      _ctx.fillStyle=colors[Math.floor((by-y)/bandH)%3];
+      _ctx.fillRect(x,by,w,bandH);
+    }
+    _ctx.restore();
+    _ctx.fillStyle='rgba(0,0,0,0.2)'; _ctx.fillRect(x,y,5,h);
+    _ctx.fillStyle='rgba(255,255,255,0.08)'; _ctx.fillRect(x+w-5,y,5,h);
+    return;
+  }
+  if(christmasOn()){
+    const colors=['#cc0000','#ffffff'];
+    const bandH=18;
+    _ctx.save();
+    _ctx.beginPath(); _ctx.rect(x,y,w,h); _ctx.clip();
+    for(let by=y;by<y+h;by+=bandH){
+      _ctx.fillStyle=colors[Math.floor((by-y)/bandH)%2];
+      _ctx.fillRect(x,by,w,bandH);
+    }
+    _ctx.restore();
+    _ctx.fillStyle='rgba(0,0,0,0.15)'; _ctx.fillRect(x,y,5,h);
+    return;
+  }
+  const g=_ctx.createLinearGradient(x,0,x+w,0);
+  if(bugsOn()){ g.addColorStop(0,'#1a3a08');g.addColorStop(0.5,'#5a9c22');g.addColorStop(1,'#1a3a08'); }
+  else if(bjbOn()){ g.addColorStop(0,'#0a2a6b');g.addColorStop(0.5,'#3a8ff5');g.addColorStop(1,'#0a2a6b'); }
+  else { g.addColorStop(0,'#6b2e0a');g.addColorStop(0.5,'#e8894a');g.addColorStop(1,'#6b2e0a'); }
+  _ctx.fillStyle=g; _ctx.fillRect(x,y,w,h);
+  _ctx.strokeStyle=bugsOn()?'rgba(0,40,0,0.6)':bjbOn()?'rgba(0,30,100,0.55)':'rgba(80,20,0,0.55)';
+  _ctx.lineWidth=3;
+  for(let ry=y+20;ry<y+h-6;ry+=40){ _ctx.beginPath();_ctx.moveTo(x,ry);_ctx.lineTo(x+w,ry);_ctx.stroke(); }
+  if(bugsOn()){ _ctx.fillStyle='rgba(100,200,40,0.18)'; for(let my=y+10;my<y+h-10;my+=35) _ctx.fillRect(x+4,my,w-8,10); }
+  _ctx.fillStyle='rgba(0,0,0,0.18)'; _ctx.fillRect(x,y,6,h);
+  _ctx.fillStyle='rgba(255,255,255,0.10)'; _ctx.fillRect(x+w-6,y,6,h);
+}
+function drawCap(x,y,w,h){
+  const g2=_ctx.createLinearGradient(x,y,x+w,y+h);
+  if(bugsOn()){ g2.addColorStop(0,'#0d2604');g2.addColorStop(1,'#061402'); }
+  else if(bjbOn()){ g2.addColorStop(0,'#062050');g2.addColorStop(1,'#030f2a'); }
+  else if(trafficOn()){ g2.addColorStop(0,'#5a0000');g2.addColorStop(1,'#1a0000'); }
+  else if(christmasOn()){ g2.addColorStop(0,'#1a5c0a');g2.addColorStop(1,'#0a2a04'); }
+  else { g2.addColorStop(0,'#8b1a00');g2.addColorStop(1,'#5a0e00'); }
+  _ctx.fillStyle=g2;
+  _ctx.beginPath();_ctx.moveTo(x-6,y);_ctx.lineTo(x+w+6,y);_ctx.lineTo(x+w,y+h);_ctx.lineTo(x,y+h);_ctx.closePath();_ctx.fill();
+  _ctx.strokeStyle=tc('#67e8f9','#88dd22','#ffd700','#cc4444','#ffd700'); _ctx.lineWidth=2;
+  _ctx.beginPath();_ctx.moveTo(x-6,y);_ctx.lineTo(x+w+6,y);_ctx.stroke();
+  _ctx.beginPath();_ctx.moveTo(x,y+h);_ctx.lineTo(x+w,y+h);_ctx.stroke();
+}
+
+// Traffic light graphic for home screen (drawn on canvas overlay only when needed)
+function drawTrafficLightBg(){
+  // two traffic lights on sides
+  [[30,200],[360,200]].forEach(([lx,ly])=>{
+    ctx.fillStyle='#222'; ctx.beginPath(); ctx.roundRect(lx,ly,30,80,6); ctx.fill();
+    // red
+    ctx.fillStyle=trafficOn()?'#ff2222':'#440000'; ctx.beginPath(); ctx.arc(lx+15,ly+16,10,0,Math.PI*2); ctx.fill();
+    // yellow
+    ctx.fillStyle=trafficOn()?'#ffd700':'#443300'; ctx.beginPath(); ctx.arc(lx+15,ly+40,10,0,Math.PI*2); ctx.fill();
+    // green
+    ctx.fillStyle=trafficOn()?'#22ff44':'#004400'; ctx.beginPath(); ctx.arc(lx+15,ly+64,10,0,Math.PI*2); ctx.fill();
+  });
+}
+
+let extraLives=0, extraLifeGrace=0, gameOverTimer=0, dying=false;
+
+function spawnExplode(x,y){
+  if(dying) return; // only explode once
+  dying=true;
+  gameOverTimer=Date.now();
+  explodeParticles=[];
+  const td=getTrailDef();
+  for(let i=0;i<28;i++){
+    const angle=(i/28)*Math.PI*2+(Math.random()-0.5)*0.3;
+    const spd=4+Math.random()*9;
+    let color;
+    if(td.draw==='rainbow') color=`hsl(${(i/28)*360},100%,65%)`;
+    else if(td.seqColors) color=td.seqColors[i%td.seqColors.length];
+    else if(td.colors) color=td.colors[i%td.colors.length];
+    else color=`hsl(${td.hue||0},${td.sat||100}%,${td.lit||65}%)`;
+    explodeParticles.push({x,y,vx:Math.cos(angle)*spd,vy:Math.sin(angle)*spd,life:1.0,size:4+Math.random()*7,color});
+  }
+}
+
+function activateExtraLifeGrace(){
+  extraLifeGrace=Date.now()+1500; // 1.5s of invincibility
+  velocity=-8; // small bounce up
+  birdY=Math.min(birdY,600); // pull back from ground
+}
+
+// ── Main loop ─────────────────────────────────────────────────────────────────
+function loop(){
+  _ctx=ctx; // ensure drawPillar/drawCap use the single-player canvas
+  // BG fill
+  ctx.fillStyle=tc('#001a33','#0a1a05','#0a0a0a','#0a1a05','#1a2a3a'); ctx.fillRect(0,0,420,720);
+
+  // Particles
+  particles.forEach(p=>{
+    ctx.globalAlpha=0.15+Math.sin(Date.now()/3000+p.x)*0.08;
+    ctx.fillStyle=tc('#a0d8ff','#aaff44','#ff6644','#ffcccc','#c8f0ff');
+    ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();
+    p.y-=p.speed*(isLumberghMode?2:1); if(p.y<-10) p.y=730;
+  });
+  ctx.globalAlpha=1;
+
+  // BG images
+  if(prevBg.complete&&prevBg.naturalWidth>0) ctx.drawImage(prevBg,0,0,420,720);
+  if(currentBg.complete&&currentBg.naturalWidth>0){ ctx.globalAlpha=fade; ctx.drawImage(currentBg,0,0,420,720); ctx.globalAlpha=1; }
+  if(bugsOn())     { ctx.fillStyle="rgba(0,60,0,0.52)";    ctx.fillRect(0,0,420,720); }
+  else if(bjbOn()) { ctx.fillStyle="rgba(0,50,140,0.36)";  ctx.fillRect(0,0,420,720); }
+  else if(trafficOn()){ ctx.fillStyle="rgba(20,0,0,0.45)"; ctx.fillRect(0,0,420,720); }
+  else if(christmasOn()){ ctx.fillStyle="rgba(0,30,0,0.4)"; ctx.fillRect(0,0,420,720); }
+  if(fade<1) fade+=0.03;
+
+  // ── Christmas snow + lights ──
+  if(christmasOn()){
+    const t=Date.now()/1000;
+    // Falling snow
+    snowflakes.forEach(s=>{
+      s.y+=s.speed; s.x+=s.drift;
+      if(s.y>730){ s.y=-10; s.x=Math.random()*420; }
+      if(s.x<0) s.x=420; if(s.x>420) s.x=0;
+      ctx.globalAlpha=0.7+Math.sin(t*2+s.x)*0.3;
+      ctx.fillStyle='#fff';
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.size,0,Math.PI*2); ctx.fill();
+    });
+    ctx.globalAlpha=1;
+    // Christmas lights string across top
+    const lightColors=['#ff0000','#00ff00','#ffd700','#0088ff','#ff69b4'];
+    for(let lx=10;lx<420;lx+=28){
+      const col=lightColors[Math.floor(lx/28)%lightColors.length];
+      const flicker=0.7+Math.sin(t*6+lx)*0.3;
+      ctx.globalAlpha=flicker;
+      ctx.fillStyle=col;
+      ctx.shadowColor=col; ctx.shadowBlur=8;
+      ctx.beginPath(); ctx.arc(lx,18,5,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#553300';
+      ctx.fillRect(lx-1,8,2,10);
+      ctx.shadowBlur=0;
+    }
+    ctx.globalAlpha=1;
+    // Thin wire string
+    ctx.strokeStyle='rgba(100,80,50,0.5)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(0,18);
+    for(let lx=10;lx<420;lx+=28) ctx.lineTo(lx,18+Math.sin(lx*0.05)*4);
+    ctx.lineTo(420,18); ctx.stroke();
+  }
+
+  if(gameStarted){
+    const elapsed=Date.now()-startTime;
+    const inGrace=elapsed<gracePeriod;
+    const speed=2.7*(isLumberghMode?2:1)*(isLumberghMode?1:scrollSpeedMult);
+    const now=Date.now()/1000;
+
+    if(!gameOver&&!dying){
+      velocity+=0.62*(isLumberghMode?2:1);
+      birdY+=velocity;
+
+      // ── Distance-based pipe spawning ──
+      // Spawn when rightmost pipe has scrolled to comfortable distance (like original feel)
+      // but cap it so we never get more than ~500px of empty space
+      const pipeMinDist = isLumberghMode ? 320 : 420; // comfortable spacing
+      const pipeMaxDist = isLumberghMode ? 420 : 520; // max before forced spawn
+      const rightmostPipe = pipes.length ? Math.max(...pipes.map(p=>p.x)) : -9999;
+      if(rightmostPipe < 520 - pipeMinDist || (pipes.length===0 && rightmostPipe < 0)) spawnPipe();
+
+      // ── Pipes ──
+      pipes.forEach(p=>{
+        p.x-=speed;
+        if(p.x+40<132&&!p.passed){
+          p.passed=true;
+          let pts=p.isEnemy?2:p.isFastEnemy?3:p.isCircleEnemy?2:1;
+          score+=pts;
+          if(!p.isEnemy&&!p.isFastEnemy&&!p.isCircleEnemy){
+            pipesPassed++;
+            if(!isLumberghMode&&pipesPassed%8===0) scrollSpeedMult+=0.26;
+          }
+          scoreSFX.currentTime=0; scoreSFX.volume=volSFX; scoreSFX.play().catch(()=>{});
+          scorePops.push({x:p.x+40,y:p.top+132,value:pts,life:1.0});
+          if(score>=15)  unlockAchievement('warrior',"KEKISTANI WARRIOR!");
+          if(score>=30)  unlockAchievement('everything',"you are everything to me.");
+          if(score>=50)  unlockAchievement('world',"the world is not enough for some.");
+          if(score>=60)  unlockAchievement('greatThings',"you have achieved great things in this life. well done.");
+          if(!isLumberghMode&&score>=100) unlockAchievement('century',"you got a score of 100 on flappy geter.");
+          if(isLumberghMode&&score>=20) unlockAchievement('lumberghMaster',"mastered lumbergh mode");
+          if(isLumberghMode&&score>=69) unlockAchievement('boltonFired',"you're FIRED!! just kidding you're promoted.");
+          if(isLumberghMode&&score>=120) unlockAchievement('execStandard',"WOOWWWW! YAYYY!!");
+          if(score>=1000) unlockAchievement('ultimateGamer',"ultimate gamer.");
+          updateHighScore();
+        }
+      });
+
+      // ── Circle enemies ──
+      circleEnemies.forEach(e=>{
+        e.angle+=e.speed*(isLumberghMode?2:1);
+        // center scrolls left with the world
+        e.cx-=speed;
+        e.x=e.cx+(Math.cos(e.angle)*e.rx);
+        e.y=e.cy+(Math.sin(e.angle)*e.ry);
+        // score when center passes bird x
+        if(e.cx+e.rx<132&&!e.passed){ e.passed=true; score+=2; scorePops.push({x:132,y:birdY,value:2,life:1.0}); updateHighScore(); }
+        if(!inGrace&&!godMode&&extraLifeGrace<Date.now()&&Math.hypot(132-e.x,birdY+28-e.y)<24){
+          if(extraLives>0){extraLives--;activateExtraLifeGrace();}
+          else spawnExplode(132,birdY+28);
+        }
+      });
+      circleEnemies=circleEnemies.filter(e=>e.cx+e.rx>-80);
+
+      // ── Fan obstacles ──
+      fanObstacles.forEach(f=>{
+        f.x-=speed;
+        f.angle+=f.spinSpeed*(isLumberghMode?2:1);
+
+        // Collision: check each blade tip
+        if(!inGrace&&!godMode&&extraLifeGrace<Date.now()){
+          for(let b=0;b<3;b++){
+            const ba=f.angle+(b/3)*Math.PI*2;
+            for(let t=0.5;t<=1;t+=0.25){
+              const bx=f.x+Math.cos(ba)*f.r*t;
+              const by=f.y+Math.sin(ba)*f.r*t;
+              if(Math.hypot(132-bx,birdY+28-by)<16){
+                if(extraLives>0){extraLives--;activateExtraLifeGrace();}
+                else spawnExplode(132,birdY+28);
+                break;
+              }
+            }
+          }
+        }
+        if(f.x<132&&!f.passed){ f.passed=true; score+=2; scorePops.push({x:132,y:birdY-10,value:2,life:1.0}); updateHighScore(); }
+      });
+      fanObstacles=fanObstacles.filter(f=>f.x>-80);
+
+      // ── Special powerups ──
+      if(doubleCoinsTimer>0&&Date.now()>doubleCoinsTimer){ coinMultiplier=1; doubleCoinsTimer=0; }
+      specialPowerUps.forEach(pu=>{
+        pu.x-=speed;
+        pu.y=pu.baseY+Math.sin(now/0.7)*11;
+        if(Math.hypot(132-pu.x,birdY+28-pu.y)<30){
+          if(pu.type==='bonus'){ score+=5; scorePops.push({x:pu.x,y:pu.y-20,value:5,life:1.4}); updateHighScore(); }
+          else if(pu.type==='life'){ extraLives++; scorePops.push({x:pu.x-20,y:pu.y-20,value:'♥ +1 LIFE!',life:1.8}); }
+          else if(pu.type==='doublecoins'){
+            coinMultiplier=2; doubleCoinsTimer=Date.now()+12000;
+            scorePops.push({x:pu.x-20,y:pu.y-20,value:'2X COINS!',life:1.8});
+          }
+          totalPowerUpsCollected++;
+          localStorage.setItem('flappyGeterPowerUps',totalPowerUpsCollected);
+          if(totalPowerUpsCollected>=14) unlockAchievement('salUnlocked',"sal has appeared! (14 powerups collected)");
+          if(totalPowerUpsCollected>=51) unlockAchievement('savvyUnlocked',"savvy businessman #3 has entered the chat. (51 powerups)");
+          pu.x=-999;
+        }
+      });
+      specialPowerUps=specialPowerUps.filter(pu=>pu.x>-200);
+
+      // ── Coins ──
+      coins.forEach(c=>{
+        c.x-=speed;
+        c.y=c.baseY+Math.sin(now/1.8+c.baseY*0.01)*9;
+        if(Math.hypot(132-c.x,birdY+28-c.y)<34){
+          if(c.isLP){
+            totalLumberghPts++; saveLumberghPts();
+            scorePops.push({x:c.x,y:c.y-14,value:'+1 LP',isLP:true,life:1.2});
+          } else {
+            const base=c.is5?5:1;
+            const gain=base*coinMultiplier;
+            totalCoins+=gain; saveCoins();
+            scorePops.push({x:c.x,y:c.y-14,value:coinMultiplier>1?`+${gain}🪙`:c.is5?'+5':'+1',isCoin:true,life:1.0});
+          }
+          c.x=-999;
+        }
+      });
+      coins=coins.filter(c=>c.x>-80);
+      pipes=pipes.filter(p=>p.x>-90);
+
+      // ── Ground ──
+      if(!inGrace&&extraLifeGrace<Date.now()&&birdY+48>678&&!godMode){
+        if(extraLives>0){ extraLives--; activateExtraLifeGrace(); }
+        else spawnExplode(132,birdY+48);
+      }
+      if(!inGrace&&extraLifeGrace<Date.now()&&birdY<-30&&!godMode) spawnExplode(132,birdY+28);
+
+      for(let p of pipes){
+        if(godMode||extraLifeGrace>Date.now()) break;
+        if(p.isEnemy||p.isFastEnemy){
+          const freq=p.isFastEnemy?3.5:1.4, amp=p.isFastEnemy?85:45;
+          const vo=Math.sin(now*freq+p.enemyPhase)*amp;
+          const size=p.isFastEnemy?70:80;
+          const ex=p.x-(size/2-20), ey=p.top+vo+(p.isFastEnemy?100:90);
+          p._ex=ex;p._ey=ey;p._size=size;
+          if(!inGrace&&p.x<195&&p.x>65){
+            if(132+25>ex&&132-25<ex+size&&birdY+20>ey&&birdY-20<ey+size){
+              if(extraLives>0){extraLives--;activateExtraLifeGrace();}
+              else spawnExplode(132,birdY+28);
+            }
+          }
+        } else if(p.isCircleEnemy){
+          // handled above
+        } else if(!inGrace&&p.x<195&&p.x>65){
+          if(birdY<p.top+14||birdY+46>p.top+p.gap){
+            if(extraLives>0){extraLives--;activateExtraLifeGrace();}
+            else spawnExplode(132,birdY+28);
+          }
+        }
+      }
+    } // end !gameOver && !dying
+
+    // Delay game over exactly 1 second after explosion fires
+    if(dying && !gameOver && Date.now()-gameOverTimer>1000){
+      gameOver=true;
+      if(score>0) setTimeout(showSaveReminder, 2500);
+    }
+
+    // ── DRAW PIPES ──
+    pipes.forEach(p=>{
+      if(p.isEnemy||p.isFastEnemy){
+        const img=p.isFastEnemy?fastEnemyImg:enemyImg;
+        if(img.complete&&p._ex!==undefined) ctx.drawImage(img,p._ex,p._ey,p._size,p._size);
+        return;
+      }
+      if(p.isCircleEnemy) return; // drawn below
+      const pw=58,capH=28,capW=pw+14,capX=p.x-(capW-pw)/2;
+      drawPillar(p.x,0,pw,p.top-capH); drawCap(capX,p.top-capH,capW,capH);
+      const botY=p.top+p.gap;
+      drawCap(capX,botY,capW,capH); drawPillar(p.x,botY+capH,pw,720-botY-capH);
+    });
+
+    // ── DRAW CIRCLE ENEMIES ──
+    circleEnemies.forEach(e=>{
+      // dotted orbit path
+      ctx.save();
+      ctx.globalAlpha=0.3; ctx.strokeStyle='#ff9900'; ctx.lineWidth=1.5;
+      ctx.setLineDash([6,5]);
+      ctx.beginPath(); ctx.ellipse(e.cx,e.cy,e.rx,e.ry,0,0,Math.PI*2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+      // enemy image
+      if(circleEnemyImg.complete){
+        ctx.save(); ctx.shadowColor='#ff6600'; ctx.shadowBlur=14;
+        ctx.drawImage(circleEnemyImg,e.x-24,e.y-24,48,48);
+        ctx.restore();
+      }
+    });
+
+    // ── DRAW SPECIAL POWERUPS (bonus + life only — doublecoins drawn in fan section) ──
+    specialPowerUps.forEach(pu=>{
+      if(pu.type==='doublecoins') return;
+      const img=pu.type==='bonus'?bonusPuImg:extraLifeImg;
+      if(img.complete){
+        ctx.save(); ctx.shadowColor=pu.type==='bonus'?'#ffd700':'#ff69b4'; ctx.shadowBlur=22;
+        ctx.drawImage(img,pu.x-18,pu.y-18,36,36); ctx.restore();
+      }
+    });
+
+    // ── DRAW COINS ──
+    coins.forEach(c=>{
+      const img=c.isLP?lumberghPtImg:c.is5?fiveCoinImg:coinImg;
+      if(img.complete){
+        ctx.save();
+        ctx.shadowColor=c.isLP?'#cc66ff':c.is5?'#00ff88':'#ffd700';
+        ctx.shadowBlur=c.isLP?20:coinMultiplier>1?20:12;
+        // Extra glow when double coins active
+        if(coinMultiplier>1&&!c.isLP){
+          ctx.globalAlpha=0.7+Math.sin(Date.now()/200)*0.3;
+        }
+        ctx.drawImage(img,c.x-14,c.y-14,28,28);
+        ctx.restore();
+        ctx.globalAlpha=1;
+      }
+    });
+
+    // ground
+    ctx.fillStyle=tc('#0a1a40','#1a3a08','#1a0000','#0a2a10','#8d5524'); ctx.fillRect(0,680,420,40);
+    ctx.fillStyle=tc('#67e8f9','#88dd22','#ffd700','#cc4444','#ffd700'); ctx.fillRect(0,685,420,8);
+
+    // ── DRAW FANS ──
+    fanObstacles.forEach(f=>{
+      ctx.save();
+      ctx.translate(f.x,f.y);
+      // Hub
+      ctx.fillStyle=tc('#4af','#8f8','#ff4','#aef','#aaa');
+      ctx.beginPath(); ctx.arc(0,0,8,0,Math.PI*2); ctx.fill();
+      // 3 blades
+      for(let b=0;b<3;b++){
+        const ba=f.angle+(b/3)*Math.PI*2;
+        ctx.save(); ctx.rotate(ba);
+        const grad=ctx.createLinearGradient(0,0,f.r,0);
+        const c1=tc('#67e8f9','#88ff44','#ffd700','#ffaaaa','#e8894a');
+        const c2=tc('#0a4a7a','#1a4a08','#884400','#aa2222','#6b2e0a');
+        grad.addColorStop(0,c1); grad.addColorStop(1,c2);
+        ctx.fillStyle=grad;
+        ctx.beginPath();
+        ctx.moveTo(5,0);
+        ctx.lineTo(f.r,6);
+        ctx.lineTo(f.r,-6);
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+      ctx.restore();
+    });
+
+    // ── DRAW DOUBLE COINS POWERUP ──
+    specialPowerUps.forEach(pu=>{
+      if(pu.type==='doublecoins'){
+        if(doubleCoinImg.complete){
+          ctx.save(); ctx.shadowColor='#ffff00'; ctx.shadowBlur=22;
+          ctx.drawImage(doubleCoinImg,pu.x-18,pu.y-18,36,36); ctx.restore();
+        }
+      }
+    });
+
+    // ── Trail particles ──
+    if(!dying&&gameStarted){
+      const td=getTrailDef();
+      const count=td.sparseParticles?1:3;
+      for(let i=0;i<count;i++){
+        trailParticles.push({
+          x:132+(Math.random()-0.5)*10,
+          y:birdY+28+(Math.random()-0.5)*10,
+          life:1.0, size:5+Math.random()*4, td,
+          colorIdx:trailColorCounter++ // always-incrementing, never shrinks
+        });
+      }
+    }
+    trailParticles=trailParticles.filter(t=>t.life>0);
+    trailParticles.forEach(t=>{
+      ctx.globalAlpha=t.life*0.55;
+      const td=t.td||{draw:'circle',hue:195,sat:100,lit:70};
+      let color;
+      if(td.draw==='rainbow') color=`hsl(${(Date.now()/20+t.x)%360},100%,65%)`;
+      else if(td.draw==='seqCircle'||td.draw==='seqSquare') color=td.seqColors[Math.floor((t.colorIdx%120)/Math.ceil(120/td.seqColors.length))%td.seqColors.length];
+      else if(td.draw==='altCircle') color=td.colors[Math.floor((t.colorIdx%60)/Math.ceil(60/td.colors.length))%td.colors.length];
+      else if(td.multiColors) color=td.multiColors[Math.floor((t.colorIdx%40)/Math.ceil(40/td.multiColors.length))%td.multiColors.length];
+      else if(td.colors) color=td.colors[Math.floor((t.colorIdx%40)/Math.ceil(40/td.colors.length))%td.colors.length];
+      else { color=`hsl(${td.hue||0},${td.sat||100}%,${td.lit||65}%)`; }
+      ctx.fillStyle=color;
+      const sz=t.size*t.life;
+      ctx.beginPath();
+      if(td.draw==='splat'){ ctx.globalAlpha=t.life*0.65; drawSplat(ctx,t.x,t.y,sz*1.2,color); }
+      else if(td.draw==='square'||td.draw==='seqSquare'){ ctx.fillRect(t.x-sz/2,t.y-sz/2,sz,sz); }
+      else if(td.draw==='triangle'){ ctx.moveTo(t.x,t.y-sz);ctx.lineTo(t.x+sz,t.y+sz);ctx.lineTo(t.x-sz,t.y+sz);ctx.closePath();ctx.fill(); }
+      else if(td.draw==='star'){
+        for(let s=0;s<5;s++){
+          const a=(s*4*Math.PI/5)-Math.PI/2,a2=((s*4+2)*Math.PI/5)-Math.PI/2;
+          if(s===0) ctx.moveTo(t.x+Math.cos(a)*sz,t.y+Math.sin(a)*sz);
+          else ctx.lineTo(t.x+Math.cos(a)*sz,t.y+Math.sin(a)*sz);
+          ctx.lineTo(t.x+Math.cos(a2)*sz*0.4,t.y+Math.sin(a2)*sz*0.4);
+        }
+        ctx.closePath();ctx.fill();
+      } else { ctx.arc(t.x,t.y,Math.max(0.5,sz),0,Math.PI*2); ctx.fill(); }
+      t.x-=1.8; t.life-=0.055;
+    });
+    ctx.globalAlpha=1;
+
+    // bird — hide when dying
+    if(!dying){
+      ctx.save(); ctx.translate(132,birdY+28);
+      ctx.rotate(Math.min(Math.max(velocity*0.055,-0.8),1.2));
+      if(flapGlow>0){
+        const td=getTrailDef();
+        const glowColor=td.draw==='rainbow'?`hsl(${Date.now()/20%360},100%,65%)`:td.multiColors?td.multiColors[0]:td.colors?td.colors[0]:`hsl(${td.hue||0},${td.sat||100}%,${td.lit||65}%)`;
+        ctx.shadowColor=glowColor; ctx.shadowBlur=30*flapGlow;
+      }
+      ctx.drawImage(characterImages[selectedCharacter],-29,-29,58,58);
+      ctx.restore(); flapGlow=Math.max(0,flapGlow-0.1);
+    }
+
+    // extra life HUD — show stacked hearts
+    if(extraLives>0||extraLifeGrace>Date.now()){
+      ctx.font="20px Arial"; ctx.shadowColor="#000"; ctx.shadowBlur=5;
+      const graceActive=extraLifeGrace>Date.now();
+      const flashOn=graceActive&&Math.floor(Date.now()/100)%2===0;
+      ctx.fillStyle=flashOn?"#ffffff":"#ff69b4";
+      for(let h=0;h<extraLives+(graceActive?1:0);h++) ctx.fillText("♥",8+h*20,716);
+    }
+
+    // Double coins HUD indicator
+    if(coinMultiplier>1){
+      const rem=Math.ceil((doubleCoinsTimer-Date.now())/1000);
+      ctx.font="bold 13px Arial"; ctx.fillStyle="#ffff44"; ctx.shadowColor="#000"; ctx.shadowBlur=4;
+      ctx.fillText(`2X🪙 ${rem}s`,300,42);
+    }
+
+    // Coin HUD during gameplay
+    ctx.font="bold 16px Arial"; ctx.fillStyle="#ffd700"; ctx.shadowColor="#000"; ctx.shadowBlur=4;
+    if(coinImg.complete) ctx.drawImage(coinImg,360,8,22,22);
+    ctx.fillText(totalCoins,385,26);
+    ctx.shadowBlur=0;
+
+    // score pops
+    scorePops=scorePops.filter(p=>p.life>0);
+    scorePops.forEach(p=>{
+      ctx.globalAlpha=p.life;
+      if(p.isLP&&lumberghPtImg.complete){
+        ctx.drawImage(lumberghPtImg,p.x-10,p.y-10,20,20);
+        ctx.fillStyle=`rgba(180,120,255,${p.life})`; ctx.font="bold 14px Arial";
+        ctx.fillText(p.value,p.x+12,p.y+5);
+      } else if(p.isCoin&&coinImg.complete){
+        ctx.drawImage(coinImg,p.x-10,p.y-10,20,20);
+        ctx.fillStyle=`rgba(255,215,0,${p.life})`; ctx.font="bold 14px Arial";
+        ctx.fillText(p.value,p.x+12,p.y+5);
+      } else {
+        ctx.fillStyle=`rgba(255,215,0,${p.life})`; ctx.font="bold 20px Arial";
+        ctx.fillText(typeof p.value==='string'?p.value:("+"+p.value),p.x,p.y);
+      }
+      p.y-=1.3; p.life-=0.016;
+    });
+    ctx.globalAlpha=1;
+  } // end gameStarted
+
+  // Explode particles — rendered outside gameStarted so they show over the game over screen
+  explodeParticles=explodeParticles.filter(p=>p.life>0);
+  explodeParticles.forEach(p=>{
+    ctx.globalAlpha=p.life;
+    ctx.fillStyle=p.color;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2); ctx.fill();
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.4; p.vx*=0.92; p.life-=0.055; p.size*=0.95;
+  });
+  ctx.globalAlpha=1;
+
+  if(showStartHint&&gameStarted&&!gameOver){
+    ctx.fillStyle="rgba(255,255,255,0.7)";ctx.font="bold 26px Arial";ctx.fillText("Tap / Space to flap!",65,180);
+  }
+
+  // Score HUD
+  ctx.fillStyle=tc('#67e8f9','#88ff44','#ffd700','#fff','#fff');
+  ctx.font="bold 58px 'Noto Sans SC',sans-serif"; ctx.shadowColor="#000"; ctx.shadowBlur=12;
+  ctx.fillText("分数 "+score,115,84);
+  ctx.fillStyle=tc('#67e8f9','#88ff44','#ffd700','#ff4444','#ffd700');
+  ctx.font="24px 'Zhi Mang Xing',cursive"; ctx.fillText("飞蛤桂林",25,40);
+  // Pillar count
+  if(gameStarted){
+    ctx.fillStyle="rgba(255,255,255,0.55)"; ctx.font="13px 'Noto Sans SC',sans-serif"; ctx.shadowBlur=4;
+    ctx.fillText("pillars: "+pipesPassed,167,100);
+  }
+
+  // Messages
+  ctx.font="italic 20px 'Playfair Display', Georgia, serif"; ctx.shadowColor="#000"; ctx.shadowBlur=6;
+  messages=messages.filter(m=>m.x>-350);
+  messages.forEach(m=>{ ctx.fillStyle=tc('#a0d8ff','#aaff66','#ffd700','#ffcccc','#dcffdc'); ctx.fillText(m.text,m.x,m.y); m.x-=m.speed; });
+
+  if(currentAchievement && currentAchievementAlpha>0){
+    ctx.save();
+    ctx.globalAlpha=currentAchievementAlpha;
+    // Background pill
+    const achX=10, achMaxW=400, achY=200;
+    ctx.font="italic bold 16px 'IM Fell English',serif";
+    // Word-wrap the text
+    const words=currentAchievement.split(' ');
+    const lines=[]; let line='';
+    words.forEach(w=>{ const test=line?line+' '+w:w; if(ctx.measureText(test).width>achMaxW-20){lines.push(line);line=w;}else line=test; });
+    if(line) lines.push(line);
+    const lineH=22, padX=10, padY=8;
+    const boxH=lines.length*lineH+padY*2, boxW=achMaxW;
+    // Glow
+    ctx.shadowColor='#ffd700'; ctx.shadowBlur=18;
+    ctx.fillStyle='rgba(10,10,30,0.88)';
+    ctx.beginPath(); ctx.roundRect(achX,achY-padY,boxW,boxH,10); ctx.fill();
+    ctx.shadowBlur=0;
+    // Border
+    ctx.strokeStyle='rgba(255,215,0,0.8)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.roundRect(achX,achY-padY,boxW,boxH,10); ctx.stroke();
+    // Text
+    ctx.fillStyle='#ffd700'; ctx.shadowColor='#ffd700'; ctx.shadowBlur=8;
+    ctx.textAlign='left';
+    lines.forEach((l,i)=>ctx.fillText(l,achX+padX,achY+i*lineH+lineH*0.7));
+    ctx.restore();
+  }
+
+  // Game over
+  if(gameOver&&gameStarted){
+    ctx.save();
+    ctx.fillStyle="rgba(0,0,0,0.88)"; ctx.fillRect(0,0,420,720);
+    ctx.textAlign='center';
+    // Mode label
+    ctx.fillStyle=isLumberghMode?'#ffd700':'#88ccff';
+    ctx.font="bold 18px 'IM Fell English',serif";
+    ctx.fillText(isLumberghMode?'— LUMBERGH MODE —':'— NORMAL MODE —', 210, 155);
+    // Title
+    ctx.fillStyle=tc('#4fc3f7','#88ff44','#ffd700','#ff4444','#ff1744');
+    ctx.font="bold 56px 'Zhi Mang Xing',cursive";
+    ctx.shadowColor=tc('#4fc3f7','#88ff44','#ffd700','#ff4444','#ff1744'); ctx.shadowBlur=12;
+    ctx.fillText("游戏结束", 210, 220);
+    ctx.shadowBlur=0;
+    ctx.fillStyle="#fff"; ctx.font="34px 'Noto Sans SC',sans-serif";
+    ctx.fillText("得分： "+score, 210, 280);
+    ctx.font="24px 'IM Fell English',serif"; ctx.fillStyle="#aaa";
+    ctx.fillText("点击重新开始", 210, 330);
+    ctx.font="15px Arial"; ctx.fillStyle="#88ff88";
+    ctx.fillText("Post your high score on Reddit!", 210, 370);
+    if(gameOverMeme.complete) ctx.drawImage(gameOverMeme, 210-120, 400, 240, 240);
+    ctx.textAlign='left';
+    ctx.restore();
+  }
+
+  requestAnimationFrame(loop);
+}
+
+// ── Circle enemy spawner ──────────────────────────────────────────────────────
+function spawnCircleEnemy(){
+  if(!gameStarted||gameOver) return;
+  // Place orbit center well away from any current pipe columns
+  const clearX=540; // spawn off-right, center is fixed horizontally
+  // Find a safe vertical center that's in open air (not inside top/bottom pipe)
+  // We pick the center of the gap from the most recent pipe
+  let cy=360;
+  if(pipes.length>0){
+    const lastPipe=pipes[pipes.length-1];
+    cy=lastPipe.top+lastPipe.gap/2; // center of gap
+  } else {
+    cy=280+Math.random()*160;
+  }
+  // Orbit radii — big enough to need dodging but passable
+  const rx=80+Math.random()*30; // wider horizontal
+  const ry=90+Math.random()*30; // tall vertical — player can go above or below
+  circleEnemies.push({
+    cx:clearX, cy,
+    rx, ry,
+    angle:Math.random()*Math.PI*2,
+    speed:(isLumberghMode?0.025:0.018)+Math.random()*0.008, // slow rotation
+    x:clearX,y:cy,
+    passed:false
+  });
+}
+setInterval(()=>{ if(gameStarted&&!gameOver) spawnCircleEnemy(); },14000+Math.random()*8000);
+
+// ══════════════════════════════════════════════════════════════════
+// ── MULTIPLAYER SYSTEM ────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+
+const mpMusic=document.getElementById('mpMusic');
+const mpContainer=document.getElementById('mpContainer');
+if(!gameDiv) var gameDiv=document.getElementById('game'); // already set in mobile block if mobile
+
+// ── MP Persistent data ────────────────────────────────────────────
+let mpSavedPlayers=JSON.parse(localStorage.getItem('fgMPPlayers'))||{};
+function mpSavePlayers(){ localStorage.setItem('fgMPPlayers',JSON.stringify(mpSavedPlayers)); }
+
+// ── MP Session state ──────────────────────────────────────────────
+let mpSession={ p1wins:0, p1losses:0, p2wins:0, p2losses:0 };
+
+// ── MP Config ─────────────────────────────────────────────────────
+let mpConfig={
+  mode:'normal', lives:3,
+  p1key:'', p2key:'',
+  p1char:0, p2char:0,
+  p1name:'Player 1', p2name:'Player 2',
+  p1savedName:'', p2savedName:'',
+  firstSetup:true, firstCharSelect:undefined, _pendingStart:false
+};
+
+// ── MP Game state ─────────────────────────────────────────────────
+let mpActive=false;
+let mpState={ p1:null, p2:null, shared:null, countdown:0, matchOver:false, _pipeInterval:null, _coinInterval:null };
+
+function mpMakePlayerState(){ return {
+  birdY:200,velocity:-6,score:0,livesLeft:mpConfig.lives,
+  dead:false,extraLives:0,extraLifeGrace:0,
+  dying:false,dyingTimer:0,explodeParticles:[],trailParticles:[],
+  flapGlow:0,pipesPassed:0,scrollSpeedMult:1
+};}
+
+function mpMakeShared(isLumbergh){ return {
+  pipes:[],circleEnemies:[],fanObstacles:[],specialPowerUps:[],
+  messages:[],scorePops1:[],scorePops2:[],
+  bgIndex:0,fade:1,isLumbergh,startTime:0,gracePeriod:0
+};}
+
+// ── ENTER MULTIPLAYER ─────────────────────────────────────────────
+function enterMultiplayer(){
+  // Step 1: immediately show black splash overlay ON TOP of everything (still narrow)
+  // This hides the home menu before we start changing things
+  const splash=document.getElementById('mpSplash');
+  const container=document.getElementById('mpContainer');
+
+  // Show container and splash at full opacity instantly — covers #game content
+  container.style.display='flex';
+  splash.style.display='flex';
+  splash.style.transition='none';
+  splash.style.opacity='1';
+  splash.style.pointerEvents='all';
+
+  // Force a paint so the splash is visible before we do anything else
+  container.getBoundingClientRect();
+
+  // Step 2: hide the title screen (now safe — splash covers it)
+  titleScreen.style.display='none';
+
+  // Step 3: expand #game to wide size — hide SP canvas so it doesn't show
+  setTimeout(()=>{
+    canvas.style.display='none'; // hide single-player canvas during MP
+    gameDiv.classList.add('mp-wide');
+
+    // Step 4: after the CSS width transition finishes (700ms), fade the splash out
+    setTimeout(()=>{
+      splash.style.transition='opacity 0.5s';
+      splash.style.opacity='0';
+
+      // Step 5: after fade out, show the MP menu
+      setTimeout(()=>{
+        splash.style.display='none';
+        splash.style.pointerEvents='none';
+        document.getElementById('mpMenu').style.display='flex';
+        mpRefreshMenu();
+        if(mpConfig.firstSetup){
+          mpConfig.firstSetup=false;
+          mpBindKey(1);
+        }
+      }, 520);
+    }, 750);
+  }, 20);
+}
+
+// ── MP MENU HELPERS ───────────────────────────────────────────────
+function mpRefreshMenu(){
+  document.getElementById('mp_p1name').value=mpConfig.p1name;
+  document.getElementById('mp_p2name').value=mpConfig.p2name;
+  document.getElementById('mp_p1key_display').textContent=mpConfig.p1key||'—';
+  document.getElementById('mp_p2key_display').textContent=mpConfig.p2key||'—';
+  // Char images
+  const c1=CHARS[mpConfig.p1char], c2=CHARS[mpConfig.p2char];
+  document.getElementById('mp_p1charimg').src=c1?c1.src:'';
+  document.getElementById('mp_p1charname').textContent=c1?c1.name:'';
+  document.getElementById('mp_p2charimg').src=c2?c2.src:'';
+  document.getElementById('mp_p2charname').textContent=c2?c2.name:'';
+  // Mode button
+  document.getElementById('mpModeBtn').textContent=mpConfig.mode==='lumbergh'?'Lumbergh 🔥':'Normal';
+  // Lives buttons
+  [1,3,5,10].forEach(n=>{
+    const b=document.getElementById('mpLives'+n);
+    b.style.background=mpConfig.lives===n?'#ffd700':'#555';
+    b.style.color=mpConfig.lives===n?'#000':'#fff';
+  });
+  // Saved player dropdowns
+  mpRefreshDropdown(1); mpRefreshDropdown(2);
+  mpRefreshStats(1); mpRefreshStats(2);
+}
+
+function mpRefreshDropdown(p){
+  const sel=document.getElementById('mp_p'+p+'saved');
+  sel.innerHTML='<option value="">— saved players —</option>';
+  Object.keys(mpSavedPlayers).forEach(name=>{
+    const opt=document.createElement('option');
+    opt.value=name; opt.textContent=name;
+    if(mpConfig['p'+p+'savedName']===name) opt.selected=true;
+    sel.appendChild(opt);
+  });
+}
+
+function mpRefreshStats(p){
+  const name=mpConfig['p'+p+'savedName'];
+  const el=document.getElementById('mp_p'+p+'stats');
+  if(!name||!mpSavedPlayers[name]){ el.textContent=''; return; }
+  const d=mpSavedPlayers[name];
+  const sw=mpSession['p'+p+'wins'], sl=mpSession['p'+p+'losses'];
+  el.innerHTML=`All: <span style="color:#88ff88">${d.wins}W</span> / <span style="color:#ff8888">${d.losses}L</span><br>Session: <span style="color:#88ff88">${sw}W</span> / <span style="color:#ff8888">${sl}L</span>`;
+}
+
+function mpSaveName(p){
+  const name=document.getElementById('mp_p'+p+'name').value.trim();
+  if(!name) return;
+  mpConfig['p'+p+'name']=name;
+  mpConfig['p'+p+'savedName']=name;
+  if(!mpSavedPlayers[name]) mpSavedPlayers[name]={wins:0,losses:0};
+  mpSavePlayers();
+  mpRefreshMenu();
+}
+
+function mpLoadSavedName(p){
+  const name=document.getElementById('mp_p'+p+'saved').value;
+  if(!name) return;
+  mpConfig['p'+p+'name']=name;
+  mpConfig['p'+p+'savedName']=name;
+  document.getElementById('mp_p'+p+'name').value=name;
+  mpRefreshStats(p);
+}
+
+function mpToggleMode(){
+  mpConfig.mode=mpConfig.mode==='normal'?'lumbergh':'normal';
+  mpRefreshMenu();
+}
+
+function mpSetLives(n){
+  mpConfig.lives=n; mpRefreshMenu();
+}
+
+function mpResetOptions(){
+  mpConfig.mode='normal'; mpConfig.lives=3;
+  mpConfig.p1key=''; mpConfig.p2key='';
+  mpRefreshMenu();
+}
+
+// ── KEY BINDING ───────────────────────────────────────────────────
+const MP_FORBIDDEN_KEYS=new Set(['Escape','F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12',
+  'Delete','Backspace','Meta','OS','ContextMenu','PrintScreen','ScrollLock','Pause','Insert','Home','End','PageUp','PageDown']);
+
+function mpKeyDisplayName(key){
+  if(key===' ') return 'Space';
+  if(key==='MouseLeft') return 'Left Click';
+  if(key==='MouseRight') return 'Right Click';
+  return key.length===1?key.toUpperCase():key;
+}
+
+function mpBindKey(p){
+  const other=p===1?mpConfig.p2key:mpConfig.p1key;
+  const prompt=document.getElementById('mpKeyPrompt');
+  const txt=document.getElementById('mpKeyPromptText');
+  txt.textContent=`Player ${p}: press your key or click`;
+  prompt.style.display='flex';
+
+  function done(key){
+    mpConfig['p'+p+'key']=key;
+    prompt.style.display='none';
+    document.removeEventListener('keydown',keyH);
+    document.removeEventListener('mousedown',mouseH);
+    mpRefreshMenu();
+    // Chain: P1 done → bind P2; P2 done → if firstSetup do char select
+    if(p===1&&!mpConfig.p2key){
+      setTimeout(()=>mpBindKey(2),300);
+    } else if(p===2&&mpConfig.firstCharSelect===undefined){
+      mpConfig.firstCharSelect=true;
+      setTimeout(()=>mpShowCharSelect(1),300);
+    }
+  }
+
+  function keyH(e){
+    e.preventDefault();
+    if(MP_FORBIDDEN_KEYS.has(e.key)) return;
+    if(e.key===other){ txt.textContent=`That key is taken by the other player! Try again.`; return; }
+    done(e.key);
+  }
+  function mouseH(e){
+    if(e.target.closest('#mpKeyPrompt')===null) return; // only clicks on the prompt
+    const key=e.button===0?'MouseLeft':'MouseRight';
+    if(key===other){ txt.textContent=`That button is taken! Try again.`; return; }
+    done(key);
+  }
+  document.addEventListener('keydown',keyH);
+  document.addEventListener('mousedown',mouseH);
+}
+
+// ── CHARACTER SELECT ──────────────────────────────────────────────
+let mpCharSelectFor=0; // which player (1 or 2)
+function mpChangeChars(){
+  mpCharSelectFor=1;
+  mpShowCharSelect(1);
+}
+function mpShowCharSelect(p){
+  const panel=document.getElementById('mpCharSelect');
+  document.getElementById('mpCharSelectTitle').textContent=`Player ${p} — Choose Character`;
+  const grid=document.getElementById('mpCharGrid');
+  grid.innerHTML='';
+  const PER_ROW=6;
+  for(let r=0;r*PER_ROW<CHARS.length;r++){
+    const row=document.createElement('div');
+    row.className='char-row';
+    CHARS.slice(r*PER_ROW,(r+1)*PER_ROW).forEach((c,ri)=>{
+      const i=r*PER_ROW+ri;
+      const unlocked=isCharUnlocked(c);
+      const div=document.createElement('div');
+      div.className='char-option'+(mpConfig['p'+p+'char']===i?' current':'');
+      div.style.opacity=unlocked?'1':'0.35';
+      const tip=document.createElement('div');
+      tip.className='char-tooltip';
+      tip.style.background=`linear-gradient(to bottom,${c.clsColor||'#ffd700'},#000)`;
+      tip.innerHTML=`<b>${c.name}</b><br><span style="font-size:10px;opacity:0.85;">${c.cls}</span>`;
+      const img=document.createElement('img');
+      img.src=c.src; img.alt=c.name;
+      div.appendChild(tip); div.appendChild(img);
+      div.onclick=()=>{
+        if(!unlocked) return;
+        mpConfig['p'+p+'char']=i;
+        panel.style.display='none';
+        if(p===1){
+          mpCharSelectFor=2;
+          setTimeout(()=>mpShowCharSelect(2),200);
+        } else {
+          mpRefreshMenu();
+          if(mpConfig._pendingStart){ mpConfig._pendingStart=false; setTimeout(()=>mpStartMatch(),300); }
+        }
+      };
+      row.appendChild(div);
+    });
+    grid.appendChild(row);
+  }
+  panel.style.display='flex';
+}
+
+function mpStartMatch(){
+  const note=document.getElementById('mpMenuNote');
+  if(!mpConfig.p1key){ note.textContent='⚠️ Player 1 needs a key!'; return; }
+  if(!mpConfig.p2key){ note.textContent='⚠️ Player 2 needs a key!'; return; }
+  note.textContent='';
+
+  // Clear any leftover intervals from a previous match (prevents double-spawning on rematch)
+  clearInterval(mpState._pipeInterval);
+  clearInterval(mpState._coinInterval);
+  mpState._pipeInterval=null;
+  mpState._coinInterval=null;
+
+  // If first char select hasn't happened yet, do it and set flag to auto-start after
+  if(mpConfig.firstCharSelect===undefined){
+    mpConfig.firstCharSelect=true;
+    mpConfig._pendingStart=true;
+    mpCharSelectFor=1;
+    mpShowCharSelect(1);
+    return;
+  }
+
+  document.getElementById('mpMenu').style.display='none';
+  document.getElementById('mpGameArea').style.display='flex';
+  document.getElementById('mpEndScreen').style.display='none';
+  document.getElementById('mpOverlay1').style.display='none';
+  document.getElementById('mpOverlay2').style.display='none';
+
+  const isLumbergh=mpConfig.mode==='lumbergh';
+  mpState.shared=mpMakeShared(isLumbergh);
+  mpState.p1=mpMakePlayerState();
+  mpState.p2=mpMakePlayerState();
+  mpState.matchOver=false;
+  mpActive=true;
+
+  mpState.shared.startTime=Date.now();
+  for(let i=0;i<3;i++) mpSpawnPipe(true);
+
+  // Stop ALL music before starting MP gameplay music
+  stopAllMusic();
+  mpMusic.currentTime=1; mpMusic.volume=Math.min(1,volMusic*1.3); mpMusic.play().catch(()=>{});
+
+  // Countdown — black screen until "1" disappears, then show gameplay, then GO
+  mpState.countdown=3;
+  const cdEl=document.getElementById('mpCountdown');
+  const cdNum=document.getElementById('mpCountdownNum');
+  cdEl.style.background='#000'; // solid black for 3 and 2
+  cdEl.style.display='flex';
+  cdNum.textContent='3'; sfx();
+  const cdTick=setInterval(()=>{
+    mpState.countdown--;
+    if(mpState.countdown===2){ cdNum.textContent='2'; sfx(); }
+    else if(mpState.countdown===1){
+      cdNum.textContent='1'; sfx();
+      // Remove black background so players can see the gameplay canvas
+      setTimeout(()=>{ cdEl.style.background='transparent'; },200);
+    }
+    else if(mpState.countdown===0){
+      cdNum.textContent='GO!'; sfx();
+      setTimeout(()=>{ cdEl.style.display='none'; cdEl.style.background='#000'; },600);
+    }
+    else {
+      clearInterval(cdTick);
+      // Game starts — set startTime so physics kicks in
+      mpState.shared.startTime=Date.now();
+      mpState._pipeInterval=setInterval(()=>{ if(!mpActive||mpState.matchOver) return; mpSpawnPipe(false); }, isLumbergh?1600:3200);
+      mpState._coinInterval=setInterval(()=>{ if(!mpActive||mpState.matchOver) return; mpSpawnCoin(); }, 3800+Math.random()*3500);
+    }
+  },1000);
+
+  document.addEventListener('keydown', mpKeyHandler);
+  document.addEventListener('mousedown', mpMouseHandler);
+
+  const ctx1=document.getElementById('mpC1').getContext('2d');
+  const ctx2=document.getElementById('mpC2').getContext('2d');
+  // Update canvas height to match container
+  function mpLoop(){ if(!mpActive) return; mpUpdate(ctx1,ctx2); requestAnimationFrame(mpLoop); }
+  requestAnimationFrame(mpLoop);
+}
+
+function mpKeyHandler(e){
+  if(e.key===mpConfig.p1key){ e.preventDefault(); mpFlap(1); }
+  if(e.key===mpConfig.p2key){ e.preventDefault(); mpFlap(2); }
+}
+function mpMouseHandler(e){
+  if(!mpActive) return;
+  const key=e.button===0?'MouseLeft':'MouseRight';
+  if(key===mpConfig.p1key) mpFlap(1);
+  if(key===mpConfig.p2key) mpFlap(2);
+}
+
+function mpFlap(p){
+  if(!mpActive||mpState.countdown>0) return;
+  const ps=p===1?mpState.p1:mpState.p2;
+  if(!ps||ps.dead||ps.dying) return; // don't flap if dead or exploding
+  ps.velocity=-13.8; ps.flapGlow=1.0;
+}
+
+// ── SHARED GAME OBJECTS (identical for both players) ──────────────
+function mpRng(){ // deterministic-ish shared random
+  return Math.random();
+}
+
+function mpSpawnPipe(isInitial){
+  const sh=mpState.shared;
+  // Guard: don't spawn if any pipe is too close to the spawn point
+  if(!isInitial){
+    const tooClose=sh.pipes.some(p=>p.x>380);
+    if(tooClose) return;
+  }
+  const gap=310, offset=mpRng()*100-50;
+  let top=360+offset-gap/2;
+  top=Math.max(100,Math.min(top,720-gap-150));
+  const isLumbergh=sh.isLumbergh;
+  const x=isInitial?520+sh.pipes.length*400:520;
+  const isEnemy=!isInitial&&mpRng()<0.075;
+  const isFast=!isInitial&&!isEnemy&&mpRng()<0.025;
+  const isCircle=!isInitial&&!isEnemy&&!isFast&&mpRng()<0.02;
+  sh.pipes.push({x,top,gap,passed1:false,passed2:false,isEnemy,isFastEnemy:isFast,isCircleEnemy:isCircle,
+    enemyPhase:mpRng()*Math.PI*2,_ex:undefined,_ey:undefined,_size:undefined});
+  // Powerups
+  if(!isInitial&&!isEnemy&&!isFast&&!isCircle){
+    const r=mpRng();
+    if(r<0.07) sh.specialPowerUps.push({x:520,baseY:top+gap/2,y:top+gap/2,type:'bonus',collected1:false,collected2:false});
+    else if(r<0.10) sh.specialPowerUps.push({x:520,baseY:top+gap/2,y:top+gap/2,type:'life',collected1:false,collected2:false});
+    // Fan spawn
+    const reg=sh.pipes.filter(p=>!p.isEnemy&&!p.isFastEnemy&&!p.isCircleEnemy);
+    if(sh.fanObstacles.length===0&&mpRng()<0.40&&reg.length>=2){
+      const prev=reg[reg.length-2];
+      const halfInterval=(520-prev.x)/2;
+      const fanX=520+halfInterval;
+      sh.fanObstacles.push({x:fanX,y:(prev.top+prev.gap/2+top+gap/2)/2,r:52+mpRng()*10,
+        angle:mpRng()*Math.PI*2,spinSpeed:(mpRng()<0.5?1:-1)*(0.017+mpRng()*0.008)*(isLumbergh?1.6:1),
+        passed1:false,passed2:false});
+    }
+  }
+}
+
+function mpSpawnCoin(){
+  const sh=mpState.shared;
+  const near=sh.pipes.filter(p=>p.x>300&&p.x<560&&!p.isEnemy&&!p.isFastEnemy&&!p.isCircleEnemy);
+  let cy;
+  if(near.length>0){ const p=near[near.length-1]; const m=40; cy=p.top+m+mpRng()*(p.gap-m*2); }
+  else cy=150+mpRng()*400;
+  sh.specialPowerUps.push({x:520,baseY:cy,y:cy,type:'coin',is5:mpRng()<0.06,collected1:false,collected2:false});
+}
+
+// ── MP UPDATE ─────────────────────────────────────────────────────
+function mpUpdate(ctx1, ctx2){
+  if(!mpActive) return;
+  const sh=mpState.shared;
+  const p1=mpState.p1, p2=mpState.p2;
+  const isLumbergh=sh.isLumbergh;
+  const elapsed=Date.now()-sh.startTime;
+  const inGrace=elapsed<sh.gracePeriod;
+  const now=Date.now()/1000;
+  const avgMult=(p1.scrollSpeedMult+p2.scrollSpeedMult)/2;
+  const speed=2.7*(isLumbergh?2:1)*(isLumbergh?1:avgMult);
+
+  // During countdown: draw the scene but freeze all physics/movement
+  if(mpState.countdown>0){
+    mpDraw(ctx1,1,p1,sh,now,true,0);
+    mpDraw(ctx2,2,p2,sh,now,true,0);
+    return;
+  }
+
+  // Update shared objects
+  sh.pipes.forEach(p=>{
+    p.x-=speed;
+    // Compute enemy draw positions
+    if(p.isEnemy||p.isFastEnemy){
+      const freq=p.isFastEnemy?3.5:1.4, amp=p.isFastEnemy?85:45;
+      const vo=Math.sin(now*freq+p.enemyPhase)*amp;
+      const sz=p.isFastEnemy?70:80;
+      p._ex=p.x-(sz/2-20); p._ey=p.top+vo+(p.isFastEnemy?100:90); p._size=sz;
+    }
+  });
+  sh.pipes=sh.pipes.filter(p=>p.x>-90);
+  sh.specialPowerUps.forEach(pu=>{ pu.x-=speed; pu.y=pu.baseY+Math.sin(now/0.7)*11; });
+  sh.specialPowerUps=sh.specialPowerUps.filter(pu=>pu.x>-200);
+  sh.circleEnemies.forEach(e=>{
+    e.angle+=e.speed*(isLumbergh?2:1);
+    e.cx-=speed;
+    e.x=e.cx+Math.cos(e.angle)*e.rx;
+    e.y=e.cy+Math.sin(e.angle)*e.ry;
+  });
+  sh.circleEnemies=sh.circleEnemies.filter(e=>e.cx+e.rx>-80);
+  sh.fanObstacles.forEach(f=>{ f.x-=speed; f.angle+=f.spinSpeed*(isLumbergh?2:1); });
+  sh.fanObstacles=sh.fanObstacles.filter(f=>f.x>-80);
+
+  // Update each player
+  [1,2].forEach(pn=>{
+    const ps=pn===1?p1:p2;
+    const pops=pn===1?sh.scorePops1:sh.scorePops2;
+    if(ps.dead) return;
+    if(!ps.dying){
+      ps.velocity+=0.62*(isLumbergh?2:1);
+      ps.birdY+=ps.velocity;
+    }
+    if(ps.dying){
+      if(Date.now()-ps.dyingTimer>1000) mpKillPlayer(pn,ps);
+      return;
+    }
+
+    const spd=speed*(isLumbergh?1:ps.scrollSpeedMult);
+
+    // Score pipes
+    sh.pipes.forEach(p=>{
+      const passedKey='passed'+pn;
+      if(p.x+40<132&&!p[passedKey]){
+        p[passedKey]=true;
+        let pts=p.isEnemy?2:p.isFastEnemy?3:p.isCircleEnemy?2:1;
+        ps.score+=pts;
+        if(!p.isEnemy&&!p.isFastEnemy&&!p.isCircleEnemy&&!isLumbergh){
+          ps.pipesPassed++;
+          if(ps.pipesPassed%8===0) ps.scrollSpeedMult+=0.26;
+        }
+        pops.push({x:p.x+40,y:p.top+132,value:pts,life:1.0});
+      }
+    });
+
+    // Powerups
+    sh.specialPowerUps.forEach(pu=>{
+      const collKey='collected'+pn;
+      if(pu[collKey]) return;
+      if(Math.hypot(132-pu.x,ps.birdY+28-pu.y)<30){
+        pu[collKey]=true;
+        if(pu.type==='bonus'){ ps.score+=5; pops.push({x:pu.x,y:pu.y-20,value:5,life:1.4}); }
+        else if(pu.type==='life'){
+          ps.livesLeft++;  // add to match lives
+          ps.extraLifeGrace=Date.now()+1500; // brief invincibility flash
+          pops.push({x:pu.x-20,y:pu.y-20,value:'♥ +1',life:1.8});
+        }
+      }
+    });
+
+    // Circle enemies score
+    sh.circleEnemies.forEach(e=>{
+      const pk='passed'+pn;
+      if(e.cx+e.rx<132&&!e[pk]){ e[pk]=true; ps.score+=2; pops.push({x:132,y:ps.birdY,value:2,life:1.0}); }
+    });
+
+    // Fan score
+    sh.fanObstacles.forEach(f=>{
+      const pk='passed'+pn;
+      if(f.x<132&&!f[pk]){ f[pk]=true; ps.score+=2; pops.push({x:132,y:ps.birdY-10,value:2,life:1.0}); }
+    });
+
+    // Collisions — mpStartDying handles livesLeft/grace internally
+    if(!inGrace&&ps.extraLifeGrace<Date.now()&&!ps.dying&&!ps.dead){
+      // Ground
+      if(ps.birdY+46>678) mpStartDying(pn,ps);
+      // Ceiling
+      if(ps.birdY<-30) mpStartDying(pn,ps);
+      // Pipes
+      sh.pipes.forEach(p=>{
+        if(ps.dying||ps.dead) return;
+        if(p.isEnemy||p.isFastEnemy){
+          const freq=p.isFastEnemy?3.5:1.4, amp=p.isFastEnemy?85:45;
+          const vo=Math.sin(now*freq+p.enemyPhase)*amp;
+          const sz=p.isFastEnemy?70:80;
+          const ex=p.x-(sz/2-20), ey=p.top+vo+(p.isFastEnemy?100:90);
+          p._ex=ex; p._ey=ey; p._size=sz;
+          if(p.x<195&&p.x>65&&132+25>ex&&132-25<ex+sz&&ps.birdY+20>ey&&ps.birdY-20<ey+sz)
+            mpStartDying(pn,ps);
+        } else if(!p.isCircleEnemy&&p.x<195&&p.x>65){
+          if(ps.birdY<p.top+14||ps.birdY+46>p.top+p.gap) mpStartDying(pn,ps);
+        }
+      });
+      // Circle enemies
+      sh.circleEnemies.forEach(e=>{
+        if(!ps.dying&&!ps.dead&&Math.hypot(132-e.x,ps.birdY+28-e.y)<24) mpStartDying(pn,ps);
+      });
+      // Fans
+      sh.fanObstacles.forEach(f=>{
+        if(ps.dying||ps.dead) return;
+        for(let b=0;b<3;b++){
+          const ba=f.angle+(b/3)*Math.PI*2;
+          for(let t=0.5;t<=1;t+=0.25){
+            const bx=f.x+Math.cos(ba)*f.r*t, by=f.y+Math.sin(ba)*f.r*t;
+            if(Math.hypot(132-bx,ps.birdY+28-by)<16){ mpStartDying(pn,ps); return; }
+          }
+        }
+      });
+    }
+  });
+
+  // Draw both canvases
+  mpDraw(ctx1, 1, p1, sh, now, inGrace, speed);
+  mpDraw(ctx2, 2, p2, sh, now, inGrace, speed);
+}
+
+function mpStartDying(pn, ps){
+  if(ps.dying||ps.dead||ps.extraLifeGrace>Date.now()) return;
+  ps.livesLeft--;
+  if(ps.livesLeft>0){
+    // Has lives — give grace period like single-player extra life
+    ps.extraLifeGrace=Date.now()+1500;
+    ps.velocity=-8;
+    ps.birdY=Math.min(ps.birdY,580);
+    // Spawn small explode for feedback
+    for(let i=0;i<14;i++){
+      const angle=(i/14)*Math.PI*2+(Math.random()-0.5)*0.3;
+      const spd=3+Math.random()*5;
+      ps.explodeParticles.push({x:132,y:ps.birdY+28,vx:Math.cos(angle)*spd,vy:Math.sin(angle)*spd,life:0.8,size:3+Math.random()*4,color:`hsl(${Math.random()*60+10},100%,65%)`});
+    }
+  } else {
+    // No lives left — full death
+    ps.dying=true;
+    ps.dyingTimer=Date.now();
+    for(let i=0;i<22;i++){
+      const angle=(i/22)*Math.PI*2+(Math.random()-0.5)*0.3;
+      const spd=4+Math.random()*8;
+      ps.explodeParticles.push({x:132,y:ps.birdY+28,vx:Math.cos(angle)*spd,vy:Math.sin(angle)*spd,life:1.0,size:4+Math.random()*6,color:`hsl(${Math.random()*60+10},100%,65%)`});
+    }
+  }
+}
+
+function mpKillPlayer(pn, ps){
+  ps.dying=false; ps.dead=true;
+  // The canvas mpDraw will now render the game over screen directly
+  // Check if match over
+  const other=pn===1?mpState.p2:mpState.p1;
+  if(other&&other.dead) mpEndMatch();
+}
+
+function mpEndMatch(){
+  if(mpState.matchOver) return;
+  mpState.matchOver=true;
+  mpActive=false;
+  clearInterval(mpState._pipeInterval);
+  clearInterval(mpState._coinInterval);
+  document.removeEventListener('keydown', mpKeyHandler);
+  document.removeEventListener('mousedown', mpMouseHandler);
+  mpMusic.pause(); mpMusic.currentTime=0;
+
+  const p1score=mpState.p1.score, p2score=mpState.p2.score;
+  const p1wins=p1score>p2score||(!mpState.p1.dead&&mpState.p2.dead);
+  const winner=p1wins?mpConfig.p1name:p2score===p1score?'Tie!':mpConfig.p2name;
+
+  // Update session stats
+  if(p1score>p2score){ mpSession.p1wins++; mpSession.p2losses++; }
+  else if(p2score>p1score){ mpSession.p2wins++; mpSession.p1losses++; }
+
+  // Update saved player stats
+  ['p1','p2'].forEach(pn=>{
+    const sn=mpConfig[pn+'savedName'];
+    if(sn&&mpSavedPlayers[sn]){
+      const won=pn==='p1'?p1score>=p2score:p2score>=p1score;
+      if(won) mpSavedPlayers[sn].wins++; else mpSavedPlayers[sn].losses++;
+      mpSavePlayers();
+    }
+  });
+
+  // Show end screen
+  setTimeout(()=>{
+    const es=document.getElementById('mpEndScreen');
+    es.style.display='flex';
+    document.getElementById('mpEndTitle').textContent=p1score===p2score?'🤝 Tie!':(p1wins?'🏆 '+mpConfig.p1name+' wins!':'🏆 '+mpConfig.p2name+' wins!');
+    document.getElementById('mpEndP1Name').textContent=mpConfig.p1name;
+    document.getElementById('mpEndP1Score').textContent='Score: '+p1score;
+    document.getElementById('mpEndP2Name').textContent=mpConfig.p2name;
+    document.getElementById('mpEndP2Score').textContent='Score: '+p2score;
+    // Session stats
+    document.getElementById('mpEndP1Session').innerHTML=`<span style="color:#88ff88">+${mpSession.p1wins}W</span> <span style="color:#ff8888">${mpSession.p1losses}L</span> this session`;
+    document.getElementById('mpEndP2Session').innerHTML=`<span style="color:#88ff88">+${mpSession.p2wins}W</span> <span style="color:#ff8888">${mpSession.p2losses}L</span> this session`;
+  },1200);
+}
+
+function mpRematch(){
+  document.getElementById('mpEndScreen').style.display='none';
+  mpStartMatch();
+}
+
+function mpBackToMenu(){
+  document.getElementById('mpEndScreen').style.display='none';
+  document.getElementById('mpGameArea').style.display='none';
+  document.getElementById('mpMenu').style.display='flex';
+  mpActive=false;
+  mpConfig.firstCharSelect=true;
+  // Stop mp music only, resume menu music from wherever it was
+  try{ mpMusic.pause(); mpMusic.currentTime=0; }catch(e){}
+  const track=getMenuTrack();
+  if(track.paused){ track.volume=volMusic; track.play().catch(()=>{}); }
+  mpRefreshMenu();
+}
+
+// ── MP DRAW ───────────────────────────────────────────────────────
+function mpDraw(ctx, pn, ps, sh, now, inGrace, speed){
+  _ctx=ctx; // so drawPillar/drawCap use the right canvas
+  const W=420,H=720;
+  ctx.fillStyle='#1a2a3a'; ctx.fillRect(0,0,W,H);
+
+  // BG images (use same bgIndex as single player)
+  if(prevBg.complete&&prevBg.naturalWidth>0) ctx.drawImage(prevBg,0,0,W,H);
+  if(currentBg.complete&&currentBg.naturalWidth>0){ ctx.globalAlpha=fade; ctx.drawImage(currentBg,0,0,W,H); ctx.globalAlpha=1; }
+
+  // Pipes
+  sh.pipes.forEach(p=>{
+    if(p.isEnemy||p.isFastEnemy){
+      const img=p.isFastEnemy?fastEnemyImg:enemyImg;
+      if(img.complete&&p._ex!==undefined) ctx.drawImage(img,p._ex,p._ey,p._size,p._size);
+      return;
+    }
+    if(p.isCircleEnemy) return;
+    const pw=58,capH=28,capW=pw+14,capX=p.x-(capW-pw)/2;
+    drawPillar(p.x,0,pw,p.top-capH); drawCap(capX,p.top-capH,capW,capH);
+    const botY=p.top+p.gap;
+    drawCap(capX,botY,capW,capH); drawPillar(p.x,botY+capH,pw,H-botY-capH);
+  });
+
+  // Circle enemies
+  sh.circleEnemies.forEach(e=>{
+    ctx.save(); ctx.globalAlpha=0.3; ctx.strokeStyle='#ff9900'; ctx.lineWidth=1.5;
+    ctx.setLineDash([6,5]); ctx.beginPath(); ctx.ellipse(e.cx,e.cy,e.rx,e.ry,0,0,Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]); ctx.restore();
+    if(circleEnemyImg.complete){ ctx.save(); ctx.shadowColor='#ff6600'; ctx.shadowBlur=14; ctx.drawImage(circleEnemyImg,e.x-24,e.y-24,48,48); ctx.restore(); }
+  });
+
+  // Powerups
+  sh.specialPowerUps.forEach(pu=>{
+    const ck='collected'+pn;
+    if(pu[ck]) return;
+    let img=pu.type==='bonus'?bonusPuImg:pu.type==='life'?extraLifeImg:null;
+    if(img&&img.complete){ ctx.save(); ctx.shadowColor=pu.type==='bonus'?'#ffd700':'#ff69b4'; ctx.shadowBlur=22; ctx.drawImage(img,pu.x-18,pu.y-18,36,36); ctx.restore(); }
+  });
+
+  // Fans
+  sh.fanObstacles.forEach(f=>{
+    ctx.save(); ctx.translate(f.x,f.y);
+    ctx.fillStyle='#aaa'; ctx.beginPath(); ctx.arc(0,0,8,0,Math.PI*2); ctx.fill();
+    for(let b=0;b<3;b++){
+      const ba=f.angle+(b/3)*Math.PI*2;
+      ctx.save(); ctx.rotate(ba);
+      const g=ctx.createLinearGradient(0,0,f.r,0);
+      g.addColorStop(0,'#e8894a'); g.addColorStop(1,'#6b2e0a');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(5,0); ctx.lineTo(f.r,6); ctx.lineTo(f.r,-6); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  });
+
+  // Ground
+  ctx.fillStyle='#8d5524'; ctx.fillRect(0,680,W,40);
+  ctx.fillStyle='#ffd700'; ctx.fillRect(0,685,W,8);
+
+  // Trail
+  if(!ps.dying){ ps.trailParticles.push({x:132+(Math.random()-0.5)*10,y:ps.birdY+28+(Math.random()-0.5)*10,life:1.0,size:5+Math.random()*4}); }
+  ps.trailParticles=ps.trailParticles.filter(t=>t.life>0);
+  ps.trailParticles.forEach(t=>{
+    const td=pn===1?getTrailDef():{hue:200,sat:100,lit:70}; // P1 uses selected trail, P2 always cyan
+    ctx.globalAlpha=t.life*0.55; ctx.fillStyle=`hsl(${td.hue},${td.sat}%,${td.lit}%)`;
+    ctx.beginPath(); ctx.arc(t.x,t.y,t.size*t.life,0,Math.PI*2); ctx.fill();
+    t.x-=1.8; t.life-=0.055;
+  }); ctx.globalAlpha=1;
+
+  // Bird
+  if(!ps.dying){
+    const charImg=characterImages[pn===1?mpConfig.p1char:mpConfig.p2char];
+    ctx.save(); ctx.translate(132,ps.birdY+28);
+    ctx.rotate(Math.min(Math.max(ps.velocity*0.055,-0.8),1.2));
+    if(ps.flapGlow>0){ ctx.shadowColor=pn===1?'#ffd700':'#67e8f9'; ctx.shadowBlur=30*ps.flapGlow; }
+    ctx.drawImage(charImg,-29,-29,58,58);
+    ctx.restore(); ps.flapGlow=Math.max(0,ps.flapGlow-0.1);
+  }
+
+  // Explode particles
+  ps.explodeParticles=ps.explodeParticles.filter(p=>p.life>0);
+  ps.explodeParticles.forEach(p=>{
+    ctx.globalAlpha=p.life; ctx.fillStyle=p.color;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2); ctx.fill();
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.4; p.vx*=0.92; p.life-=0.055;
+  }); ctx.globalAlpha=1;
+
+  // Hearts for lives remaining (bottom left, like single-player extra lives)
+  if(ps.livesLeft>0||ps.extraLifeGrace>Date.now()){
+    ctx.font="22px Arial"; ctx.shadowColor="#000"; ctx.shadowBlur=5;
+    const graceActive=ps.extraLifeGrace>Date.now();
+    const flashOn=graceActive&&Math.floor(Date.now()/100)%2===0;
+    ctx.fillStyle=flashOn?"#ffffff":"#ff69b4";
+    for(let h=0;h<ps.livesLeft;h++) ctx.fillText("♥",8+h*22,716);
+  }
+
+  // Score (top center)
+  ctx.fillStyle="#fff"; ctx.font="bold 40px 'Noto Sans SC',sans-serif"; ctx.shadowColor="#000"; ctx.shadowBlur=10;
+  ctx.fillText("分数 "+ps.score, 90, 65);
+  ctx.fillStyle="rgba(255,255,255,0.5)"; ctx.font="12px Arial"; ctx.shadowBlur=3;
+  ctx.fillText("pillars: "+ps.pipesPassed, 155, 82);
+
+  // Score pops
+  const pops=pn===1?sh.scorePops1:sh.scorePops2;
+  sh['scorePops'+pn]=pops.filter(p=>p.life>0);
+  pops.forEach(p=>{
+    ctx.globalAlpha=p.life; ctx.fillStyle=`rgba(255,215,0,${p.life})`; ctx.font="bold 18px Arial";
+    ctx.fillText(typeof p.value==='string'?p.value:("+"+p.value),p.x,p.y);
+    p.y-=1.2; p.life-=0.016;
+  }); ctx.globalAlpha=1;
+
+  // Player name + key (top left, stacked cleanly)
+  ctx.shadowBlur=4; ctx.shadowColor="#000";
+  ctx.font="bold 12px Arial";
+  ctx.fillStyle=pn===1?"#ffd700":"#67e8f9";
+  ctx.fillText(pn===1?mpConfig.p1name:mpConfig.p2name, 4, 14);
+  ctx.font="11px Arial"; ctx.fillStyle="#aaa";
+  ctx.fillText("["+(pn===1?mpKeyDisplayName(mpConfig.p1key):mpKeyDisplayName(mpConfig.p2key))+"]", 4, 28);
+  ctx.shadowBlur=0;
+
+  // Dead overlay (drawn on canvas, covers everything)
+  if(ps.dead){
+    ctx.fillStyle="#000"; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle="#ff4444"; ctx.font="bold 56px 'Zhi Mang Xing',cursive";
+    ctx.shadowColor="#000"; ctx.shadowBlur=8;
+    ctx.textAlign="center";
+    ctx.fillText("游戏结束", W/2, H/2-40);
+    ctx.fillStyle="#fff"; ctx.font="bold 24px Arial";
+    ctx.fillText("Score: "+ps.score, W/2, H/2+10);
+    ctx.textAlign="left";
+    ctx.shadowBlur=0;
+  }
+}
+
+// ── EXIT MULTIPLAYER ──────────────────────────────────────────────
+function exitMultiplayer(){
+  mpActive=false;
+  clearInterval(mpState._pipeInterval);
+  clearInterval(mpState._coinInterval);
+  document.removeEventListener('keydown', mpKeyHandler);
+  document.removeEventListener('mousedown', mpMouseHandler);
+  mpMusic.pause(); mpMusic.currentTime=0;
+
+  // Step 1: show exit overlay instantly (covers everything before changes)
+  const exitOv=document.getElementById('mpExitOverlay');
+  exitOv.style.transition='none';
+  exitOv.style.display='flex';
+  exitOv.style.opacity='1';
+
+  requestAnimationFrame(()=>{
+    // Step 2: shrink #game back (exit overlay covers the resize)
+    setTimeout(()=>{ gameDiv.classList.remove('mp-wide'); },50);
+
+    // Step 3: after shrink, hide MP, show home
+    setTimeout(()=>{
+      mpContainer.style.display='none';
+      document.getElementById('mpMenu').style.display='none';
+      document.getElementById('mpGameArea').style.display='none';
+      mpConfig.firstSetup=true; mpConfig.firstCharSelect=undefined; mpConfig._pendingStart=false;
+      canvas.style.display='block'; // restore SP canvas
+      titleScreen.style.display='flex';
+      applyTitleTheme();
+      if(splashDismissed){ try{ mpMusic.pause(); mpMusic.currentTime=0; }catch(e){} const track=getMenuTrack(); if(track.paused){ track.volume=volMusic; track.play().catch(()=>{}); } }
+      mpSession={p1wins:0,p1losses:0,p2wins:0,p2losses:0};
+
+      // Step 4: fade out exit overlay
+      exitOv.style.transition='opacity 0.6s';
+      exitOv.style.opacity='0';
+      setTimeout(()=>{ exitOv.style.display='none'; },650);
+    },850);
+  });
+}
+applyTitleTheme();
+// Init lumbergh pts display
+document.getElementById('lumberghPtCount').textContent=totalLumberghPts;
+
+// Wire splash screen — multiple event types for maximum compatibility
+function _trySplashDismiss(e){
+  if(!splashDismissed){ if(e&&e.cancelable) e.preventDefault(); dismissSplash(); }
+}
+document.getElementById('splashScreen').addEventListener('click', _trySplashDismiss);
+document.getElementById('splashScreen').addEventListener('touchend', _trySplashDismiss, {passive:false});
+document.getElementById('splashScreen').addEventListener('pointerup', _trySplashDismiss);
+// Also listen on document in case splash element doesn't receive the event
+document.addEventListener('click', function docClick(){ if(!splashDismissed){ dismissSplash(); document.removeEventListener('click',docClick); } });
+document.addEventListener('touchend', function docTouch(e){ if(!splashDismissed){ e.preventDefault(); dismissSplash(); document.removeEventListener('touchend',docTouch); } }, {passive:false});
+document.addEventListener('keydown', function splashKey(e){
+  if(!splashDismissed){ dismissSplash(); document.removeEventListener('keydown', splashKey); }
+});
+
+// ── Pause music when tab/app is hidden (mobile background) ───────────────────
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden){
+    // Tab hidden — pause all music
+    [menuMusic,bugsMenuMusic,bjbMenuMusicNew,trafficMenuMusic,bjbMenuMusic,
+     bgMusic,lumberghMusic,christmasMusic,mpMusic].forEach(a=>{ try{a.pause();}catch(e){} });
+  } else {
+    // Tab visible again — resume whatever should be playing
+    if(gameStarted&&!gameOver){
+      const gm = isLumberghMode?lumberghMusic:bgMusic;
+      if(gm.paused){ try{gm.play().catch(()=>{});}catch(e){} }
+    } else if(splashDismissed&&!gameStarted){
+      const track=getMenuTrack();
+      if(track.paused){ try{track.play().catch(()=>{});}catch(e){} }
+    }
+  }
+});
+
+// ── Auto-copy & save reminder ─────────────────────────────────────────────────
+let autoCopyOnClose = localStorage.getItem('fgAutoCopy') === 'true';
+function toggleAutoCopy(){
+  autoCopyOnClose = document.getElementById('autoCopyToggle').checked;
+  localStorage.setItem('fgAutoCopy', autoCopyOnClose);
+}
+// Set checkbox state on load
+document.addEventListener('DOMContentLoaded', ()=>{
+  const cb = document.getElementById('autoCopyToggle');
+  if(cb) cb.checked = autoCopyOnClose;
+});
+// Simpler: set it immediately since script runs after DOM
+(()=>{ const cb=document.getElementById('autoCopyToggle'); if(cb) cb.checked=autoCopyOnClose; })();
+
+window.addEventListener('beforeunload', ()=>{
+  // Best-effort sync copy on close - may not work in all browsers
+  if(!autoCopyOnClose) return;
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=generateSaveCode();
+    ta.style.cssText='position:fixed;top:-9999px;left:-9999px;opacity:0;';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }catch(e){}
+});
+
+// More reliable: auto-copy every 3 minutes while the page is open and toggle is on
+let _autoCopyInterval=null;
+function startAutoCopyInterval(){
+  if(_autoCopyInterval) clearInterval(_autoCopyInterval);
+  _autoCopyInterval=setInterval(()=>{
+    if(!autoCopyOnClose) return;
+    const code=generateSaveCode();
+    // Try modern clipboard API first
+    navigator.clipboard.writeText(code).catch(()=>{
+      // Fallback to execCommand
+      try{
+        const ta=document.createElement('textarea');
+        ta.value=code; ta.style.cssText='position:fixed;top:-9999px;left:-9999px;opacity:0;';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+      }catch(e){}
+    });
+    // Show brief toast
+    showAutoCopyToast();
+  }, 3*60*1000); // every 3 minutes
+}
+startAutoCopyInterval();
+
+function showAutoCopyToast(){
+  const existing=document.getElementById('autoCopyToast');
+  if(existing) existing.remove();
+  const t=document.createElement('div');
+  t.id='autoCopyToast';
+  t.style.cssText='position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:rgba(20,30,50,0.95);border:1px solid #ffd700;color:#ffd700;font-size:12px;padding:6px 14px;border-radius:20px;z-index:9999;pointer-events:none;transition:opacity 0.5s;';
+  t.textContent='📋 Save code auto-copied!';
+  document.body.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),500); },2000);
+}
+
+let _saveReminderShown = false;
+function showSaveReminder(){
+  if(_saveReminderShown) return;
+  _saveReminderShown = true;
+  const banner = document.createElement('div');
+  banner.id = 'saveReminderBanner';
+  // Append inside #titleScreen so it's above the game canvas but inside the border
+  // titleScreen is position:absolute;inset:0;z-index:10 — banner sits at bottom of it
+  const container = document.getElementById('titleScreen');
+  banner.style.cssText = 'position:absolute;bottom:0;left:0;right:0;background:linear-gradient(135deg,rgba(10,16,32,0.97),rgba(5,10,25,0.97));border-top:2px solid #ffd700;color:#ffd700;font-family:Arial,sans-serif;font-size:12px;padding:8px 12px;display:flex;flex-direction:column;align-items:center;gap:7px;z-index:20;box-sizing:border-box;';
+  banner.innerHTML = `
+    <span style="text-align:center;">💾 <b>Don't forget to save!</b> Copy your code so you don't lose progress.</span>
+    <div style="display:flex;gap:8px;justify-content:center;">
+      <button id="saveReminderCopyBtn" style="background:#ffd700;color:#000;border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:bold;cursor:pointer;">📋 Copy Code</button>
+      <button onclick="document.getElementById('saveReminderBanner').remove()" style="background:#333;color:#aaa;border:1px solid #555;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;">✕</button>
+    </div>`;
+  container.appendChild(banner);
+  document.getElementById('saveReminderCopyBtn').addEventListener('click', ()=>{
+    navigator.clipboard.writeText(generateSaveCode()).then(()=>{
+      document.getElementById('saveReminderCopyBtn').textContent = '✅ Copied!';
+      setTimeout(()=>{ document.getElementById('saveReminderBanner')?.remove(); }, 1500);
+    }).catch(()=>{
+      buildSaveCode();
+      showOverlay('saveMenu');
+      document.getElementById('saveReminderBanner').remove();
+    });
+  });
+}
+
+requestAnimationFrame(loop);
+
+// ── Embedded/Brave storage warning ────────────────────────────────────────────
+(function(){
+  try{
+    const framed=(window.self!==window.top);
+    const brave=!!(navigator.brave&&navigator.brave.isBrave);
+    if(!framed||sessionStorage.getItem('fgStoreWarn')) return;
+    const show=(isBrave)=>{
+      const d=document.createElement('div');
+      d.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;background:#222;color:#fff;border:2px solid #ffcc00;border-radius:8px;padding:10px;font:13px sans-serif;text-align:center;';
+      d.innerHTML=(isBrave?'Brave deletes saved progress for embedded games when the tab closes. ':'Some browsers delete saved progress for embedded games when the tab closes. ')+
+        '<a href="'+location.href+'" target="_blank" style="color:#ffcc00;font-weight:bold">Open the game in its own tab</a> to keep your progress, or copy your save code from the Save menu. '+
+        '<button style="margin-left:6px">OK</button>';
+      d.querySelector('button').onclick=()=>{ d.remove(); try{sessionStorage.setItem('fgStoreWarn','1');}catch(e){} };
+      document.body.appendChild(d);
+    };
+    if(brave) show(true);
+    else if(isMobile||/Safari/.test(navigator.userAgent)&&!/Chrome/.test(navigator.userAgent)) show(false);
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
